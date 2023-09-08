@@ -19,6 +19,32 @@ namespace wga {
         }
     };
 
+    template<typename T, bool Destroyable = false>
+    struct object {
+        explicit object(T &&t_data)
+                : data{std::forward<T>(t_data)} {
+
+        }
+
+        ~object() {
+            if constexpr(Destroyable) {
+                data.destroy();
+            }
+            data.release();
+        }
+
+        [[nodiscard]] auto &get() noexcept {
+            return data;
+        }
+
+        [[nodiscard]] const auto &get() const noexcept {
+            return data;
+        }
+
+    private:
+        T data;
+    };
+
     auto on_device_error(wgpu::ErrorType type, const char *message) {
         std::cerr << "Uncaptured device error: type " << type;
         if (message) {
@@ -127,6 +153,18 @@ namespace wga {
     }
 
     auto get_device(wgpu::Adapter &adapter) {
+        wgpu::SupportedLimits supported_limits;
+        adapter.getLimits(&supported_limits);
+        //std::clog << "adapter.maxVertexAttributes: " << supported_limits.limits.maxVertexAttributes << '\n';
+
+        wgpu::RequiredLimits required_limits = wgpu::Default;
+        required_limits.limits.maxVertexAttributes = 1;
+        required_limits.limits.maxVertexBuffers = 1;
+        required_limits.limits.maxBufferSize = 6 * 2 * sizeof(float);
+        required_limits.limits.maxVertexBufferArrayStride = 2 * sizeof(float);
+        required_limits.limits.minStorageBufferOffsetAlignment = supported_limits.limits.minStorageBufferOffsetAlignment;
+        required_limits.limits.minUniformBufferOffsetAlignment = supported_limits.limits.minUniformBufferOffsetAlignment;
+
         wgpu::DeviceDescriptor device_descriptor(wgpu::Default);
         device_descriptor.nextInChain = nullptr;
         device_descriptor.label = "My Device";
@@ -134,6 +172,7 @@ namespace wga {
         device_descriptor.requiredFeatures = nullptr;
         device_descriptor.defaultQueue.nextInChain = nullptr;
         device_descriptor.defaultQueue.label = "The default queue";
+        device_descriptor.requiredLimits = &required_limits;
 
         auto device = wga::request_device(adapter, device_descriptor);
         device.setUncapturedErrorCallback(on_device_error);
@@ -153,8 +192,8 @@ namespace wga {
         swapchain_desc.format = get_swapchain_format(surface, adapter);
         swapchain_desc.usage = WGPUTextureUsage_RenderAttachment;
         swapchain_desc.presentMode = WGPUPresentMode_Fifo;
-
-        return device.createSwapChain(surface, swapchain_desc);
+        wga::object<wgpu::SwapChain> swapchain{device.createSwapChain(surface, swapchain_desc)};
+        return swapchain;
     }
 
     static constexpr const char *triangle_shader_source = R"(
@@ -177,6 +216,18 @@ fn fs_main() -> @location(0) vec4f {
 }
 )";
 
+    static constexpr const char *basic_shader_source = R"(
+@vertex
+fn vs_main(@location(0) in_vertex_position: vec2f) -> @builtin(position) vec4f {
+	return vec4f(in_vertex_position, 0.0, 1.0);
+}
+
+@fragment
+fn fs_main() -> @location(0) vec4f {
+    return vec4f(0.0, 0.4, 1.0, 1.0);
+}
+)";
+
     auto create_pipeline(wgpu::Surface &surface, wgpu::Adapter &adapter, wgpu::Device &device) {
         wgpu::ShaderModuleWGSLDescriptor wgsl_desc;
         wgsl_desc.chain.next = nullptr;
@@ -188,6 +239,7 @@ fn fs_main() -> @location(0) vec4f {
         shader_module_desc.hintCount = 0;
         shader_module_desc.hints = nullptr;
         auto shader_module = device.createShaderModule(shader_module_desc);
+        std::clog << "Shader module: " << shader_module << '\n';
 
         wgpu::BlendState blend_state;
         blend_state.color.srcFactor = wgpu::BlendFactor::SrcAlpha;
@@ -210,9 +262,30 @@ fn fs_main() -> @location(0) vec4f {
         fragment_state.targetCount = 1;
         fragment_state.targets = &color_target;
 
+        wgpu::VertexAttribute vertex_attrib;
+        vertex_attrib.setDefault();
+        vertex_attrib.shaderLocation = 0; // @location(0)
+        vertex_attrib.format = wgpu::VertexFormat::Float32x2;
+        vertex_attrib.offset = 0;
+
+        wgpu::VertexBufferLayout vertex_buffer_layout;
+        vertex_buffer_layout.setDefault();
+        vertex_buffer_layout.attributeCount = 1;
+        vertex_buffer_layout.attributes = &vertex_attrib;
+        vertex_buffer_layout.arrayStride = 2 * sizeof(float);
+        vertex_buffer_layout.stepMode = wgpu::VertexStepMode::Vertex;
+
+        wgpu::PipelineLayoutDescriptor pipeline_layout_desc = wgpu::Default;
+        pipeline_layout_desc.label = "Pipeline layout";
+        pipeline_layout_desc.bindGroupLayoutCount = 0;
+        pipeline_layout_desc.bindGroupLayouts = nullptr;
+        pipeline_layout_desc.nextInChain = nullptr;
+        wgpu::PipelineLayout layout = device.createPipelineLayout(pipeline_layout_desc);
+
         wgpu::RenderPipelineDescriptor desc;
-        desc.vertex.bufferCount = 0;
-        desc.vertex.buffers = nullptr;
+        desc.label = "Render pipeline";
+        desc.vertex.bufferCount = 1;
+        desc.vertex.buffers = &vertex_buffer_layout;
         desc.vertex.module = shader_module;
         desc.vertex.entryPoint = "vs_main";
         desc.vertex.constantCount = 0;
@@ -226,9 +299,22 @@ fn fs_main() -> @location(0) vec4f {
         desc.multisample.count = 1;
         desc.multisample.mask = ~0u;
         desc.multisample.alphaToCoverageEnabled = false;
-        desc.layout = nullptr;
+        desc.layout = layout;
+
         auto pipeline = device.createRenderPipeline(desc);
+        std::clog << "Render pipeline: " << pipeline << '\n';
         return pipeline;
+    }
+
+    auto create_buffer(wgpu::Device &device, std::uint64_t size, int usage) {
+        wgpu::BufferDescriptor desc;
+        desc.label = "Buffer\n";
+        desc.usage = usage;
+        desc.size = size;
+        desc.mappedAtCreation = false;
+
+        wga::object<wgpu::Buffer, true> buffer{device.createBuffer(desc)};
+        return buffer;
     }
 }
 
