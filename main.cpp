@@ -50,6 +50,9 @@ int main() {
         std::clog << "Swapchain: " << swapchain << '\n';
         //swap_chain.release();
 
+        auto pipeline = wga::create_pipeline(surface, adapter, device);
+        std::clog << "Pipeline: " << pipeline << '\n';
+
         while (!glfwWindowShouldClose(window.get())) {
             glfwPollEvents();
 
@@ -85,6 +88,10 @@ int main() {
             render_pass_desc.timestampWriteCount = 0;
             render_pass_desc.timestampWrites = nullptr;
             auto render_pass = encoder.beginRenderPass(render_pass_desc);
+
+            render_pass.setPipeline(pipeline);
+            render_pass.draw(3, 1, 0, 0);
+
             render_pass.end();
 
             render_pass.release();
