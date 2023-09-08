@@ -14,6 +14,10 @@ add_executable(wga main.cpp)
 target_link_libraries(wga PRIVATE
         glfw webgpu glfw glfw3webgpu)
 
+target_include_directories(wga PRIVATE
+        ${CMAKE_SOURCE_DIR}/src
+        ${CMAKE_SOURCE_DIR}/include)
+
 if (CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
     #target_compile_options(wga PRIVATE
     #        -Wall -Wextra -Wpedantic -Wconversion -Wshadow)

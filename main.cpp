@@ -9,140 +9,34 @@
 #include <webgpu/webgpu.hpp>
 #include <glfw3webgpu.h>
 
-namespace {
-    template<typename T, void(*F)(T)>
-    struct deleter {
-        auto operator()(T value) {
-            F(value);
-            std::clog << "Deleting with " << typeid(F).name() << '\n';
-        }
-    };
-
-    wgpu::Adapter request_adapter(wgpu::Instance &instance, const wgpu::RequestAdapterOptions &options) {
-        std::optional<wgpu::Adapter> result;
-        const char *result_message;
-        auto on_adapter_request_ended =
-                [&result, &result_message](wgpu::RequestAdapterStatus status, wgpu::Adapter adapter,
-                                           const char *message) {
-                    if (status == wgpu::RequestAdapterStatus::Success) {
-                        result = {adapter};
-                    } else {
-                        result = std::nullopt;
-                    }
-                    result_message = message;
-                };
-
-        instance.requestAdapter(options, on_adapter_request_ended);
-
-        if (!result) {
-            std::cerr << "Could not get WebGPU adapter: " << result_message << '\n';
-        }
-
-        return result.value();
-    }
-
-    wgpu::Device request_device(wgpu::Adapter &adapter, const wgpu::DeviceDescriptor &descriptor) {
-        std::optional<wgpu::Device> result;
-        const char *result_message;
-        auto on_device_request_ended =
-                [&result, &result_message](wgpu::RequestDeviceStatus status, wgpu::Device device, const char *message) {
-                    if (status == wgpu::RequestDeviceStatus::Success) {
-                        result = device;
-                    } else {
-                        result = std::nullopt;
-                    }
-                    result_message = message;
-                };
-
-        adapter.requestDevice(descriptor, on_device_request_ended);
-
-        if (!result) {
-            std::cerr << "Could not get WebGPU adapter: " << result_message << '\n';
-        }
-
-        return result.value();
-    }
-
-}
+#include <wga/wga.hpp>
 
 int main() {
     std::cout << "Hello, World!" << std::endl;
 
     try {
-        struct glfw_init {
-            glfw_init() {
-                if (auto r = glfwInit(); !r) {
-                    static const std::string message =
-                            "Could not initialize GLFW!, return code: " + std::to_string(r) + "\n";
-                    std::cerr << message;
-                    throw std::runtime_error(message);
-                }
-            }
-
-            ~glfw_init() {
-                glfwTerminate();
-                std::clog << "Calling glfwTerminate \n";
-            }
-        } glfw_init;
+        wga::glfw_init glfw_init;
 
         static constexpr int width{640};
         static constexpr int height{480};
-        std::unique_ptr<GLFWwindow, deleter<GLFWwindow *, glfwDestroyWindow>> window([]() -> GLFWwindow * {
-            glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
-            auto *window = glfwCreateWindow(width, height, "WebGPU Example", nullptr, nullptr);
-            if (!window) {
-                static constexpr auto message = "Could not create window!\n";
-                std::cerr << message;
-                throw std::runtime_error(message);
-            }
-            return window;
-        }());
+        auto window = wga::create_window(width, height);
 
-        wgpu::InstanceDescriptor descriptor;
-        descriptor.nextInChain = nullptr;
-
-        wgpu::Instance instance = wgpu::createInstance(descriptor);
-        if (!instance) {
-            static const std::string message = "Could not create wgpu instance!\n";
-            std::cerr << message;
-            throw std::runtime_error(message);
-        }
-
+        auto instance = wga::create_instance();
         std::clog << "WGPU instance: " << instance << '\n';
 
-        wgpu::Surface surface = glfwGetWGPUSurface(instance, window.get());
+        auto surface = wga::create_surface(instance, window.get());
 
-        auto adapter = request_adapter(instance, WGPURequestAdapterOptions{.compatibleSurface = surface});
+        auto adapter = wga::request_adapter(instance, surface);
         std::clog << "Got adapter: " << adapter << '\n';
 
-        auto feature_count = adapter.enumerateFeatures(nullptr);
-        std::vector<wgpu::FeatureName> features(feature_count, wgpu::FeatureName::Undefined);
-        adapter.enumerateFeatures(features.data());
-
-        std::clog << "Adapter feature:\n";
-        for (const auto &feature: features) {
+        auto adapter_features = wga::get_adapter_features(adapter);
+        std::clog << "Adapter features:\n";
+        for (const auto &feature: adapter_features) {
             std::clog << "\t" << feature << '\n';
         }
 
-        wgpu::DeviceDescriptor device_descriptor(wgpu::Default);
-        device_descriptor.nextInChain = nullptr;
-        device_descriptor.label = "My Device";
-        device_descriptor.requiredFeaturesCount = 0;
-        device_descriptor.requiredFeatures = nullptr;
-        device_descriptor.defaultQueue.nextInChain = nullptr;
-        device_descriptor.defaultQueue.label = "The default queue";
-        auto device = request_device(adapter, device_descriptor);
+        auto device = wga::get_device(adapter);
         std::clog << "Got device: " << device << '\n';
-
-        auto on_device_error = [](wgpu::ErrorType type, const char *message) {
-            std::cerr << "Uncaptured device error: type " << type;
-            if (message) {
-                std::cerr << " (" << message << ")";
-            }
-            std::cerr << '\n';
-        };
-
-        device.setUncapturedErrorCallback(on_device_error);
 
         auto queue = device.getQueue();
 
@@ -152,25 +46,16 @@ int main() {
 
         queue.onSubmittedWorkDone(on_queue_work_done);
 
-        wgpu::SwapChainDescriptor swap_chain_desc = {};
-        swap_chain_desc.nextInChain = nullptr;
-        swap_chain_desc.width = width;
-        swap_chain_desc.height = height;
-        swap_chain_desc.format = surface.getPreferredFormat(adapter);
-        swap_chain_desc.usage = WGPUTextureUsage_RenderAttachment;
-        swap_chain_desc.presentMode = WGPUPresentMode_Fifo;
-
-        wgpu::SwapChain swap_chain = device.createSwapChain(surface, swap_chain_desc);
-        std::clog << "Swap chain: " << swap_chain << '\n';
+        auto swapchain = wga::create_swapchain(surface, adapter, device, width, height);
+        std::clog << "Swapchain: " << swapchain << '\n';
         //swap_chain.release();
 
         while (!glfwWindowShouldClose(window.get())) {
             glfwPollEvents();
 
-            wgpu::TextureView next_texture = swap_chain.getCurrentTextureView();
-            if(!next_texture)
-            {
-                std::cerr << "Cannot acquire next swap chain texture\n";
+            wgpu::TextureView next_texture = swapchain.getCurrentTextureView();
+            if (!next_texture) {
+                std::cerr << "Cannot acquire next swapchain texture\n";
                 break;
             }
             std::clog << "next texture: " << next_texture << '\n';
@@ -179,8 +64,6 @@ int main() {
             encoder_descriptor.nextInChain = nullptr;
             encoder_descriptor.label = "My command encoder";
             auto encoder = device.createCommandEncoder(encoder_descriptor);
-
-            //encoder.insertDebugMarker("Do one thing");
 
             // Todo: verify that .release must be called with the c++ wrapper
 #ifdef WEBGPU_BACKEND_DAWN
@@ -204,17 +87,20 @@ int main() {
             auto render_pass = encoder.beginRenderPass(render_pass_desc);
             render_pass.end();
 
+            render_pass.release();
             next_texture.release();
 
             wgpu::CommandBufferDescriptor command_buffer_desc = {};
             command_buffer_desc.nextInChain = nullptr;
             command_buffer_desc.label = "Command buffer";
             auto command = encoder.finish(command_buffer_desc);
+            encoder.release();
 
             std::clog << "Submitting command...\n";
             queue.submit(1, &command);
+            command.release();
 
-            swap_chain.present();
+            swapchain.present();
         }
 
     } catch (std::exception &exception) {
