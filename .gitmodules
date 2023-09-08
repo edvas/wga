@@ -1,0 +1,6 @@
+[submodule "extern/webgpu"]
+	path = extern/webgpu
+	url = git@github.com:eliemichel/WebGPU-Cpp.git
+[submodule "extern/glfw3webgpu"]
+	path = extern/glfw3webgpu
+	url = https://github.com/eliemichel/glfw3webgpu
