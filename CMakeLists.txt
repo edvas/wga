@@ -3,24 +3,33 @@ project(wga)
 
 set(CMAKE_CXX_STANDARD 17)
 
-find_package(glfw3 REQUIRED)
-
+add_subdirectory(libs/glfw)
 add_subdirectory(libs/webgpu)
-add_subdirectory(extern/glfw3webgpu)
-target_link_libraries(glfw3webgpu PUBLIC glfw)
+add_subdirectory(libs/glfw3webgpu)
 
 add_executable(wga main.cpp)
 
+set_target_properties(wga PROPERTIES
+        CXX_STANDARD 17
+        C_STANDARD 17)
+
 target_link_libraries(wga PRIVATE
-        glfw webgpu glfw glfw3webgpu)
+        glfw webgpu glfw3webgpu)
 
 target_include_directories(wga PRIVATE
         ${CMAKE_SOURCE_DIR}/src
         ${CMAKE_SOURCE_DIR}/include)
 
-if (CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
-    #target_compile_options(wga PRIVATE
-    #        -Wall -Wextra -Wpedantic -Wconversion -Wshadow)
+if (CMAKE_CXX_COMPILER_ID STREQUAL "MSVC")
+    target_compile_options(wga PRIVATE /W4 /WX)
 else ()
-    message("Compiler warnings not set for ${CMAKE_CXX_COMPILER_ID}")
+    target_compile_options(wga PRIVATE
+            -O2 -Werror
+            -Wall -Wextra -Wpedantic -Wconversion -Wshadow
+            -Wfloat-conversion -Wsign-conversion -Warith-conversion
+            -Wsign-promo -Wdouble-promotion -Walloc-zero -Wfloat-equal
+            -Wlogical-op -Wold-style-cast -Wformat=2 -Wredundant-decls
+    )
 endif ()
+
+target_copy_webgpu_binaries(wga)

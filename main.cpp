@@ -1,16 +1,22 @@
 #include <iostream>
-#include <memory>
 #include <optional>
 #include <vector>
 
-#include <cstdint>
 #include <cstdlib>
+#include <cstdint>
 
 #include <GLFW/glfw3.h>
+
+#define WEBGPU_CPP_IMPLEMENTATION
+#ifndef WEBGPU_CPP_IMPLEMENTATION
+// Removes unsused macro warning for WEBGPU_CPP_IMPLEMENTATION
+#endif
+
 #include <webgpu/webgpu.hpp>
 #include <glfw3webgpu.h>
 
 #include <wga/wga.hpp>
+
 
 int main() {
     std::cout << "Hello, World!" << std::endl;
@@ -23,85 +29,82 @@ int main() {
         auto window = wga::create_window(width, height);
 
         auto instance = wga::create_instance();
-        std::clog << "WGPU instance: " << instance << '\n';
+        std::clog << "WGPU instance: " << instance.get() << '\n';
 
         auto surface = wga::create_surface(instance, window.get());
 
         auto adapter = wga::request_adapter(instance, surface);
-        std::clog << "Got adapter: " << adapter << '\n';
+        std::clog << "Got adapter: " << adapter.get() << '\n';
 
         auto adapter_features = wga::get_adapter_features(adapter);
-        std::clog << "Adapter features:\n";
-        for (const auto &feature: adapter_features) {
-            std::clog << "\t" << feature << '\n';
+        if constexpr (false) {
+            std::clog << "Adapter features:\n";
+            for (const auto &feature: adapter_features) {
+                std::clog << "\t" << feature << '\n';
+            }
         }
 
-        auto device = wga::get_device(adapter);
-        std::clog << "Got device: " << device << '\n';
 
-        auto queue = device.getQueue();
+        auto device = wga::get_device(adapter);
+        std::clog << "Got device: " << device.get() << '\n';
+
+        wgpu::SupportedLimits supportedLimits;
+        adapter.get().getLimits(&supportedLimits);
+        std::cout << "adapter.maxVertexAttributes: " << supportedLimits.limits.maxVertexAttributes << std::endl;
+
+        device.get().getLimits(&supportedLimits);
+        std::cout << "device.maxVertexAttributes: " << supportedLimits.limits.maxVertexAttributes << std::endl;
+
+
+        auto queue = wga::object<wgpu::Queue>{device.get().getQueue()};
 
         auto on_queue_work_done = [](wgpu::QueueWorkDoneStatus status) {
             std::clog << "Queue work finished with status: " << status << '\n';
         };
 
-        queue.onSubmittedWorkDone(on_queue_work_done);
+        queue.get().onSubmittedWorkDone(on_queue_work_done);
 
         auto swapchain = wga::create_swapchain(surface, adapter, device, width, height);
         std::clog << "Swapchain: " << swapchain.get() << '\n';
-        //swap_chain.release();
 
         auto pipeline = wga::create_pipeline(surface, adapter, device);
-        std::clog << "Pipeline: " << pipeline << '\n';
+        std::clog << "Pipeline: " << pipeline.get() << '\n';
 
-/*
-        std::vector<std::uint8_t> numbers(16);
-        for (std::uint8_t i = 0; i < 16; ++i) numbers[i] = i;
-
-        auto buffer1 = wga::create_buffer(device, 16, wgpu::BufferUsage::CopyDst | wgpu::BufferUsage::CopySrc);
-        auto buffer2 = wga::create_buffer(device, 16, wgpu::BufferUsage::CopyDst | wgpu::BufferUsage::MapRead);
-
-        queue.writeBuffer(buffer1.get(), 0, numbers.data(), numbers.size());
-
-        auto on_buffer2_mapped = [](WGPUBufferMapAsyncStatus status, void * userdata) {
-            std::clog << "Buffer 2 mapped with status " << status << '\n';
-            if(status != wgpu::BufferMapAsyncStatus::Success) {
-                return;
-            }
-        };
-*/
         wgpu::SupportedLimits supported_limits;
-        device.getLimits(&supported_limits);
+        device.get().getLimits(&supported_limits);
         std::clog << "device.maxVertexAttributes: " << supported_limits.limits.maxVertexAttributes << '\n';
 
-
         std::vector<float> vertex_data{
-                -0.5f, -0.5f,
-                +0.5f, -0.5f,
-                +0.0f, +0.5f
+                // x, y, r, g, b
+                -0.5f, -0.5f, 1.0f, 0.0f, 0.0f,
+                +0.5f, -0.5f, 0.0f, 1.0f, 0.0f,
+                +0.0f, +0.5f, 0.0f, 0.0f, 1.0f,
+
+                -0.55f, -0.5f, 1.0f, 1.0f, 0.0f,
+                -0.05f, +0.5f, 1.0f, 0.0f, 1.0f,
+                -0.55f, +0.5f, 0.0f, 1.0f, 1.0f
         };
-        int vertex_count = static_cast<int>(vertex_data.size() / 2);
+        auto vertex_count = static_cast<std::uint32_t>(vertex_data.size() / 5);
 
         auto vertex_buffer = wga::create_buffer(device, vertex_data.size() * sizeof(float),
                                                 wgpu::BufferUsage::CopyDst | wgpu::BufferUsage::Vertex);
-        queue.writeBuffer(vertex_buffer.get(), 0,
-                          vertex_data.data(), vertex_data.size() * sizeof(float));
+        queue.get().writeBuffer(vertex_buffer.get(), 0,
+                                vertex_data.data(), vertex_data.size() * sizeof(float));
 
         while (!glfwWindowShouldClose(window.get())) {
             //queue.submit(0, nullptr);
             glfwPollEvents();
 
             auto next_texture = wga::object<wgpu::TextureView>{swapchain.get().getCurrentTextureView()};
-            if (!next_texture.get()) {
+            if (!next_texture.get().operator bool()) {
                 std::cerr << "Cannot acquire next swapchain texture\n";
                 break;
             }
-            //std::clog << "next texture: " << next_texture << '\n';
 
             wgpu::CommandEncoderDescriptor encoder_descriptor = {};
             encoder_descriptor.nextInChain = nullptr;
             encoder_descriptor.label = "My command encoder";
-            auto encoder = wga::object<wgpu::CommandEncoder>{device.createCommandEncoder(encoder_descriptor)};
+            auto encoder = wga::object<wgpu::CommandEncoder>{device.get().createCommandEncoder(encoder_descriptor)};
 
             wgpu::RenderPassColorAttachment render_pass_color_attachment = {};
             render_pass_color_attachment.view = next_texture.get();
@@ -119,31 +122,29 @@ int main() {
             render_pass_desc.timestampWrites = nullptr;
             auto render_pass = wga::object<wgpu::RenderPassEncoder>{encoder.get().beginRenderPass(render_pass_desc)};
 
-            render_pass.get().setPipeline(pipeline);
+            render_pass.get().setPipeline(pipeline.get());
             render_pass.get().setVertexBuffer(0, vertex_buffer.get(), 0, vertex_data.size() * sizeof(float));
 
             render_pass.get().draw(vertex_count, 1, 0, 0);
 
             render_pass.get().end();
 
-            //wgpuBufferMapAsync(buffer2.get(), wgpu::MapMode::Read, 0, 16, on_buffer2_mapped, nullptr);
-
-            //encoder.copyBufferToBuffer(buffer1.get(), 0, buffer2.get(), 0, 16);
-
             wgpu::CommandBufferDescriptor command_buffer_desc = {};
             command_buffer_desc.nextInChain = nullptr;
             command_buffer_desc.label = "Command buffer";
             auto command = wga::object<wgpu::CommandBuffer>{encoder.get().finish(command_buffer_desc)};
 
-            std::clog << "Submitting command...\n";
-            queue.submit(1, &command.get());
+            queue.get().submit(1, &command.get());
 
             swapchain.get().present();
         }
 
-
-    } catch (std::exception &exception) {
+    } catch (const std::exception &exception) {
         std::cerr << "Exception: " << exception.what() << '\n';
+        return EXIT_FAILURE;
+    } catch (...) {
+        std::cerr << "Unknown exception\n";
+        //throw;
         return EXIT_FAILURE;
     }
 
