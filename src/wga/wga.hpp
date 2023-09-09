@@ -5,6 +5,7 @@
 #include <memory>
 #include <optional>
 #include <vector>
+#include <type_traits>
 
 #include <GLFW/glfw3.h>
 #include <webgpu/webgpu.hpp>
@@ -13,6 +14,11 @@
 #include <wga/shaders.hpp>
 
 namespace wga {
+    template<template<typename...> class T, typename U, typename... V>
+    std::size_t bytesize(const T<U, V...> &data) {
+        return data.size() * sizeof(U);
+    }
+
     template<typename T, void(*F)(T)>
     struct deleter {
         auto operator()(T value) {

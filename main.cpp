@@ -74,25 +74,34 @@ int main() {
         device.get().getLimits(&supported_limits);
         std::clog << "device.maxVertexAttributes: " << supported_limits.limits.maxVertexAttributes << '\n';
 
-        std::vector<float> vertex_data{
+        std::vector<float> point_data{
                 // x, y, r, g, b
                 -0.5f, -0.5f, 1.0f, 0.0f, 0.0f,
                 +0.5f, -0.5f, 0.0f, 1.0f, 0.0f,
-                +0.0f, +0.5f, 0.0f, 0.0f, 1.0f,
-
-                -0.55f, -0.5f, 1.0f, 1.0f, 0.0f,
-                -0.05f, +0.5f, 1.0f, 0.0f, 1.0f,
-                -0.55f, +0.5f, 0.0f, 1.0f, 1.0f
+                +0.5f, +0.5f, 0.0f, 0.0f, 1.0f,
+                -0.5f, +0.5f, 1.0f, 1.0f, 0.0f,
         };
-        auto vertex_count = static_cast<std::uint32_t>(vertex_data.size() / 5);
 
-        auto vertex_buffer = wga::create_buffer(device, vertex_data.size() * sizeof(float),
+        std::vector<std::uint32_t> index_data{
+                0, 1, 2,
+                0, 2, 3
+        };
+
+        auto index_count = static_cast<std::uint32_t>(index_data.size());
+
+        auto vertex_buffer = wga::create_buffer(device, wga::bytesize(point_data),
                                                 wgpu::BufferUsage::CopyDst | wgpu::BufferUsage::Vertex);
+
         queue.get().writeBuffer(vertex_buffer.get(), 0,
-                                vertex_data.data(), vertex_data.size() * sizeof(float));
+                                point_data.data(), wga::bytesize(point_data));
+
+        auto index_buffer = wga::create_buffer(device, wga::bytesize(index_data),
+                                               wgpu::BufferUsage::CopyDst | wgpu::BufferUsage::Index);
+
+        queue.get().writeBuffer(index_buffer.get(), 0,
+                                index_data.data(), wga::bytesize(index_data));
 
         while (!glfwWindowShouldClose(window.get())) {
-            //queue.submit(0, nullptr);
             glfwPollEvents();
 
             auto next_texture = wga::object<wgpu::TextureView>{swapchain.get().getCurrentTextureView()};
@@ -123,9 +132,11 @@ int main() {
             auto render_pass = wga::object<wgpu::RenderPassEncoder>{encoder.get().beginRenderPass(render_pass_desc)};
 
             render_pass.get().setPipeline(pipeline.get());
-            render_pass.get().setVertexBuffer(0, vertex_buffer.get(), 0, vertex_data.size() * sizeof(float));
+            render_pass.get().setVertexBuffer(0, vertex_buffer.get(), 0, wga::bytesize(point_data));
+            render_pass.get().setIndexBuffer(index_buffer.get(), wgpu::IndexFormat::Uint32, 0,
+                                             wga::bytesize(index_data));
 
-            render_pass.get().draw(vertex_count, 1, 0, 0);
+            render_pass.get().drawIndexed(index_count, 1, 0, 0, 0);
 
             render_pass.get().end();
 
