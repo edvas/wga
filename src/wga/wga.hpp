@@ -6,6 +6,9 @@
 #include <optional>
 #include <vector>
 #include <type_traits>
+#include <filesystem>
+#include <fstream>
+#include <sstream>
 
 #include <GLFW/glfw3.h>
 #include <webgpu/webgpu.hpp>
@@ -208,12 +211,21 @@ namespace wga {
         return wga::object<wgpu::SwapChain>{device.get().createSwapChain(surface.get(), swapchain_desc)};
     }
 
-    auto create_pipeline(wga::object<wgpu::Surface> &surface, wga::object<wgpu::Adapter> &adapter,
-                         wga::object<wgpu::Device> &device) {
+    auto create_shader_module(const std::filesystem::path &path, wga::object<wgpu::Device> &device) {
+
+        std::ifstream stream(path);
+        if (!stream) {
+            throw std::runtime_error("Could not load shader file: " + path.string());
+        }
+
+        std::stringstream ss;
+        ss << stream.rdbuf();
+        std::string source = ss.str();
+
         wgpu::ShaderModuleWGSLDescriptor wgsl_desc;
         wgsl_desc.chain.next = nullptr;
         wgsl_desc.chain.sType = wgpu::SType::ShaderModuleWGSLDescriptor;
-        wgsl_desc.code = basic_color_shader_source;
+        wgsl_desc.code = source.c_str();
 
         wgpu::ShaderModuleDescriptor shader_module_desc;
         shader_module_desc.label = "Shader module";
@@ -221,8 +233,15 @@ namespace wga {
         shader_module_desc.hintCount = 0;
         shader_module_desc.hints = nullptr;
         std::clog << "Creating shader module\n";
-        auto shader_module = device.get().createShaderModule(shader_module_desc);
-        std::clog << "Shader module: " << shader_module << '\n';
+        //return shader_module.set(device.get().createShaderModule(shader_module_desc));
+        return wga::object<wgpu::ShaderModule>{device.get().createShaderModule(shader_module_desc)};
+    }
+
+    auto create_pipeline(wga::object<wgpu::Surface> &surface, wga::object<wgpu::Adapter> &adapter,
+                         wga::object<wgpu::Device> &device) {
+
+        auto shader_module = wga::create_shader_module("../data/shaders/basic_color.wgsl", device);
+        std::clog << "Shader module: " << shader_module.get() << '\n';
 
         wgpu::BlendState blend_state;
         blend_state.color.srcFactor = wgpu::BlendFactor::SrcAlpha;
@@ -238,7 +257,7 @@ namespace wga {
         color_target.writeMask = wgpu::ColorWriteMask::All;
 
         wgpu::FragmentState fragment_state;
-        fragment_state.module = shader_module;
+        fragment_state.module = shader_module.get();
         fragment_state.entryPoint = "fs_main";
         fragment_state.constantCount = 0;
         fragment_state.constants = nullptr;
@@ -273,7 +292,7 @@ namespace wga {
         desc.label = "Render pipeline";
         desc.vertex.bufferCount = 1;
         desc.vertex.buffers = &vertex_buffer_layout;
-        desc.vertex.module = shader_module;
+        desc.vertex.module = shader_module.get();
         desc.vertex.entryPoint = "vs_main";
         desc.vertex.constantCount = 0;
         desc.vertex.constants = nullptr;
