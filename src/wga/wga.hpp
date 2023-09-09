@@ -157,7 +157,7 @@ namespace wga {
         wgpu::RequiredLimits required_limits = wgpu::Default;
         required_limits.limits.maxVertexAttributes = 2;
         required_limits.limits.maxVertexBuffers = 1;
-        required_limits.limits.maxBufferSize = 6 * 5 * sizeof(float);
+        required_limits.limits.maxBufferSize = 15 * 5 * sizeof(float);
         required_limits.limits.maxVertexBufferArrayStride = 5 * sizeof(float);
         required_limits.limits.minStorageBufferOffsetAlignment = supported_limits.limits.minStorageBufferOffsetAlignment;
         required_limits.limits.minUniformBufferOffsetAlignment = supported_limits.limits.minUniformBufferOffsetAlignment;

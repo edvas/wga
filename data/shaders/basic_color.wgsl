@@ -16,9 +16,10 @@ struct vertex_output
 fn vs_main(in: vertex_input) -> vertex_output
 {
     let ratio = 640.0 / 480.0;
+    let offset = vec2f(-0.6875, -0.463);
 
     var out: vertex_output;
-    out.position = vec4f(in.position.x, in.position.y * ratio, 0.0, 1.0);
+    out.position = vec4f(in.position.x + offset.x, (in.position.y + offset.y) * ratio, 0.0, 1.0);
     out.color = in.color;
 	return out;
 }
@@ -26,5 +27,6 @@ fn vs_main(in: vertex_input) -> vertex_output
 @fragment
 fn fs_main(in: vertex_output) -> @location(0) vec4f
 {
-    return vec4f(in.color, 1.0);
+    let linear_color = pow(in.color, vec3f(2.2));
+    return vec4f(linear_color, 1.0);
 }

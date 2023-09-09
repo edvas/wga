@@ -16,6 +16,7 @@
 #include <glfw3webgpu.h>
 
 #include <wga/wga.hpp>
+#include <wga/geometry/geometry.hpp>
 
 
 int main() {
@@ -44,7 +45,6 @@ int main() {
             }
         }
 
-
         auto device = wga::get_device(adapter);
         std::clog << "Got device: " << device.get() << '\n';
 
@@ -54,7 +54,6 @@ int main() {
 
         device.get().getLimits(&supportedLimits);
         std::cout << "device.maxVertexAttributes: " << supportedLimits.limits.maxVertexAttributes << std::endl;
-
 
         auto queue = wga::object<wgpu::Queue>{device.get().getQueue()};
 
@@ -74,32 +73,24 @@ int main() {
         device.get().getLimits(&supported_limits);
         std::clog << "device.maxVertexAttributes: " << supported_limits.limits.maxVertexAttributes << '\n';
 
-        std::vector<float> point_data{
-                // x, y, r, g, b
-                -0.5f, -0.5f, 1.0f, 0.0f, 0.0f,
-                +0.5f, -0.5f, 0.0f, 1.0f, 0.0f,
-                +0.5f, +0.5f, 0.0f, 0.0f, 1.0f,
-                -0.5f, +0.5f, 1.0f, 1.0f, 0.0f,
-        };
+        std::vector<float> point_data;
+        std::vector<std::uint32_t> index_data;
 
-        std::vector<std::uint32_t> index_data{
-                0, 1, 2,
-                0, 2, 3
-        };
-
-        auto index_count = static_cast<std::uint32_t>(index_data.size());
+        if (!wga::geometry::load("../data/models/webgpu.txt", point_data, index_data)) {
+            throw std::runtime_error("Could not load geometry from file!");
+        }
 
         auto vertex_buffer = wga::create_buffer(device, wga::bytesize(point_data),
                                                 wgpu::BufferUsage::CopyDst | wgpu::BufferUsage::Vertex);
-
         queue.get().writeBuffer(vertex_buffer.get(), 0,
                                 point_data.data(), wga::bytesize(point_data));
 
         auto index_buffer = wga::create_buffer(device, wga::bytesize(index_data),
                                                wgpu::BufferUsage::CopyDst | wgpu::BufferUsage::Index);
-
         queue.get().writeBuffer(index_buffer.get(), 0,
                                 index_data.data(), wga::bytesize(index_data));
+
+        auto index_count = static_cast<std::uint32_t>(index_data.size());
 
         while (!glfwWindowShouldClose(window.get())) {
             glfwPollEvents();
