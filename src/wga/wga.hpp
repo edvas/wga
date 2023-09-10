@@ -183,6 +183,9 @@ namespace wga {
         required_limits.limits.maxUniformBuffersPerShaderStage = 1;
         required_limits.limits.maxUniformBufferBindingSize = 16 * sizeof(float);
         required_limits.limits.maxDynamicUniformBuffersPerPipelineLayout = 1;
+        required_limits.limits.maxTextureDimension1D = 480;
+        required_limits.limits.maxTextureDimension2D = 640;
+        required_limits.limits.maxTextureArrayLayers = 1;
 
         wgpu::DeviceDescriptor device_descriptor = wgpu::Default;
         device_descriptor.label = "My Device";

@@ -10,6 +10,7 @@
 
 namespace wga {
     struct context {
+        wgpu::TextureFormat depth_texture_format;
         wga::object<wgpu::Instance> instance;
         wga::object<wgpu::Surface> surface;
         wga::object<wgpu::Adapter> adapter;
@@ -61,7 +62,7 @@ namespace wga {
 
     auto create_pipeline(wga::object<wgpu::Surface> &surface, wga::object<wgpu::Adapter> &adapter,
                          wga::object<wgpu::Device> &device,
-                         wga::object<wgpu::BindGroupLayout> &bind_group_layout) {
+                         wga::object<wgpu::BindGroupLayout> &bind_group_layout, wgpu::TextureFormat &format) {
 
         auto shader_module = wga::create_shader_module("../data/shaders/basic_color.wgsl", device);
 
@@ -110,6 +111,13 @@ namespace wga {
         pipeline_layout_desc.bindGroupLayouts = reinterpret_cast<WGPUBindGroupLayout *>(&bind_group_layout.get());
         wgpu::PipelineLayout layout = device.get().createPipelineLayout(pipeline_layout_desc);
 
+        wgpu::DepthStencilState depth_stencil_state = wgpu::Default;
+        depth_stencil_state.depthCompare = wgpu::CompareFunction::Less;
+        depth_stencil_state.depthWriteEnabled = true;
+        depth_stencil_state.format = format;
+        depth_stencil_state.stencilReadMask = 0;
+        depth_stencil_state.stencilWriteMask = 0;
+
         wgpu::RenderPipelineDescriptor desc;
         desc.label = "Render pipeline";
         desc.vertex.bufferCount = 1;
@@ -123,7 +131,7 @@ namespace wga {
         desc.primitive.frontFace = wgpu::FrontFace::CCW;
         desc.primitive.cullMode = wgpu::CullMode::None; // Todo: ::Front
         desc.fragment = &fragment_state;
-        desc.depthStencil = nullptr;
+        desc.depthStencil = &depth_stencil_state;
         desc.multisample.count = 1;
         desc.multisample.mask = ~0u;
         desc.multisample.alphaToCoverageEnabled = false;
@@ -135,6 +143,7 @@ namespace wga {
     auto setup(wga::window_t &window, std::uint32_t width, std::uint32_t height,
                std::uint32_t uniforms_count) -> wga::context {
         wga::context context{
+                wgpu::TextureFormat::Depth24Plus,
                 wga::create_instance(),
                 wga::create_surface(context.instance, window.get()),
                 wga::request_adapter(context.instance, context.surface),
@@ -144,7 +153,8 @@ namespace wga {
                                    wgpu::BufferUsage::CopyDst | wgpu::BufferUsage::Uniform),
                 wga::create_bind_group_layout(context.device),
                 wga::create_bind_group(context.device, context.uniform_buffer, context.bind_group_layout),
-                wga::create_pipeline(context.surface, context.adapter, context.device, context.bind_group_layout),
+                wga::create_pipeline(context.surface, context.adapter, context.device, context.bind_group_layout,
+                                     context.depth_texture_format),
                 wga::create_queue(context.device)
         };
 

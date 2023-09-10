@@ -65,6 +65,27 @@ int main() {
                 break;
             }
 
+            wgpu::TextureDescriptor depth_texture_desc;
+            depth_texture_desc.dimension = wgpu::TextureDimension::_2D;
+            depth_texture_desc.format = context.depth_texture_format;
+            depth_texture_desc.mipLevelCount = 1;
+            depth_texture_desc.sampleCount = 1;
+            depth_texture_desc.size = {width, height, 1};
+            depth_texture_desc.usage = wgpu::TextureUsage::RenderAttachment;
+            depth_texture_desc.viewFormatCount = 1;
+            depth_texture_desc.viewFormats = reinterpret_cast<WGPUTextureFormat*>(&context.depth_texture_format);
+            auto depth_texture = wga::object<wgpu::Texture, true>{context.device.get().createTexture(depth_texture_desc)};
+
+            wgpu::TextureViewDescriptor depth_texture_view_desc;
+            depth_texture_view_desc.aspect = wgpu::TextureAspect::DepthOnly;
+            depth_texture_view_desc.baseArrayLayer = 0;
+            depth_texture_view_desc.arrayLayerCount = 1;
+            depth_texture_view_desc.baseMipLevel = 0;
+            depth_texture_view_desc.mipLevelCount = 1;
+            depth_texture_view_desc.dimension = wgpu::TextureViewDimension::_2D;
+            depth_texture_view_desc.format = context.depth_texture_format;
+            auto depth_texture_view = wga::object{depth_texture.get().createView(depth_texture_view_desc)};
+
             wgpu::CommandEncoderDescriptor encoder_descriptor = {};
             encoder_descriptor.nextInChain = nullptr;
             encoder_descriptor.label = "My command encoder";
@@ -78,11 +99,22 @@ int main() {
             render_pass_color_attachment.storeOp = WGPUStoreOp_Store;
             render_pass_color_attachment.clearValue = wgpu::Color{0.9, 0.1, 0.2, 1.0};
 
+            wgpu::RenderPassDepthStencilAttachment render_pass_depth_stencil_attachment;
+            render_pass_depth_stencil_attachment.view = depth_texture_view.get();
+            render_pass_depth_stencil_attachment.depthClearValue = 1.0f;
+            render_pass_depth_stencil_attachment.depthLoadOp = wgpu::LoadOp::Clear;
+            render_pass_depth_stencil_attachment.depthStoreOp = wgpu::StoreOp::Store;
+            render_pass_depth_stencil_attachment.depthReadOnly = false;
+            render_pass_depth_stencil_attachment.stencilClearValue = 0;
+            render_pass_depth_stencil_attachment.stencilLoadOp = wgpu::LoadOp::Clear;
+            render_pass_depth_stencil_attachment.stencilStoreOp = wgpu::StoreOp::Store;
+            render_pass_depth_stencil_attachment.stencilReadOnly = true;
+
             wgpu::RenderPassDescriptor render_pass_desc = {};
             render_pass_desc.nextInChain = nullptr;
             render_pass_desc.colorAttachmentCount = 1;
             render_pass_desc.colorAttachments = &render_pass_color_attachment;
-            render_pass_desc.depthStencilAttachment = nullptr;
+            render_pass_desc.depthStencilAttachment = &render_pass_depth_stencil_attachment;
             render_pass_desc.timestampWriteCount = 0;
             render_pass_desc.timestampWrites = nullptr;
             auto render_pass = wga::object{encoder.get().beginRenderPass(render_pass_desc)};
