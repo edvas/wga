@@ -11,6 +11,9 @@
 #include <string>
 #include <vector>
 
+#define TINYOBJLOADER_IMPLEMENTATION
+#include <tiny_obj_loader.h>
+
 namespace wga::geometry {
     // https://eliemichel.github.io/LearnWebGPU/basic-3d-rendering/input-geometry/loading-from-file.html
     bool load(const std::filesystem::path &path, std::vector<float> &pointData,
@@ -63,6 +66,72 @@ namespace wga::geometry {
                 }
             }
         }
+        return true;
+    }
+
+    // https://eliemichel.github.io/LearnWebGPU/basic-3d-rendering/3d-meshes/loading-from-file.html
+    bool load_obj(const std::filesystem::path& path, std::vector<wga::shader_type::vertex_attributes>& vertex_data)
+    {
+        tinyobj::attrib_t attrib;
+        std::vector<tinyobj::shape_t> shapes;
+        std::vector<tinyobj::material_t> materials;
+
+        std::string warn;
+        std::string err;
+        bool ret = tinyobj::LoadObj(&attrib, &shapes, &materials, &warn, &err, path.string().c_str());
+
+        if(!warn.empty())
+        {
+            std::clog << warn << '\n';
+        }
+
+        if(!err.empty())
+        {
+            std::clog << err << '\n';
+        }
+
+        if(!ret)
+        {
+            return false;
+        }
+
+        if(shapes.empty())
+        {
+            std::clog << "No shapes in file!\n";
+        }
+
+        vertex_data.clear();
+        for(const auto& shape : shapes) {
+            const std::size_t offset = vertex_data.size();
+            vertex_data.resize(offset + shape.mesh.indices.size());
+
+            for (std::size_t i = 0; i < shape.mesh.indices.size(); ++i) {
+                const auto &idx = shape.mesh.indices[i];
+
+                // +X+Y+Z => +X-Z+Y
+                const auto vi = static_cast<std::size_t>(idx.vertex_index);
+                vertex_data[offset + i].position = {
+                        attrib.vertices[3 * vi + 0],
+                        -attrib.vertices[3 * vi + 2],
+                        attrib.vertices[3 * vi + 1]
+                };
+
+                const auto ni = static_cast<std::size_t>(idx.normal_index);
+                vertex_data[offset + i].normal = {
+                        attrib.vertices[3 * ni + 0],
+                        -attrib.vertices[3 * ni + 2],
+                        attrib.vertices[3 * ni + 1]
+                };
+
+                const auto ci = vi;
+                vertex_data[offset + i].color = {
+                        attrib.vertices[3 * ci + 0],
+                        attrib.vertices[3 * ci + 1],
+                        attrib.vertices[3 * ci + 2]
+                };
+            }
+        }
+
         return true;
     }
 }

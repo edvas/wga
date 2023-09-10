@@ -37,15 +37,16 @@ int main() {
         auto MM = [] {
             float angle = 0.0f;
             auto S = glm::scale(glm::mat4x4(1.0), glm::vec3(0.3f));
-            auto T = glm::translate(glm::mat4x4(1.0), glm::vec3(0.5, 0.0, 0.0));
+            auto T = glm::translate(glm::mat4x4(1.0), glm::vec3(0.0, 0.0, 0.0));
             auto R = glm::rotate(glm::mat4x4(1.0), angle, glm::vec3(0.0, 0.0, 1.0));
             return R * T * S;
         }();
 
         auto VM = [] {
             float angle = 3.0f * glm::pi<float>() / 4.0f;
+            glm::vec3 focal_point = {0.0, 0.0, -1.0};
             auto R = glm::rotate(glm::mat4x4(1.0), -angle, glm::vec3(1.0, 0.0, 0.0));
-            auto T = glm::translate(glm::mat4x4(1.0), -glm::vec3(0.0, 0.0, -2.0));
+            auto T = glm::translate(glm::mat4x4(1.0), -focal_point);
             return T * R;
         }();
 
@@ -75,7 +76,8 @@ int main() {
         std::clog << "device.maxVertexAttributes: " << supported_limits.limits.maxVertexAttributes << '\n';
 
         //auto model = wga::create_model(context, "../data/models/webgpu.txt", 2);
-        auto model = wga::create_model(context, "../data/models/pyramid.txt", 6);
+        //auto model = wga::create_model(context, "../data/models/pyramid.txt", 6);
+        auto model = wga::create_model_obj(context, "../data/models/pyramid.obj");
 
         auto uniform_stride = get_uniform_buffer_stride(context.device);
 
@@ -89,7 +91,7 @@ int main() {
             uniforms.model_matrix = [&uniforms] {
                 float angle = uniforms.time;
                 auto S = glm::scale(glm::mat4x4(1.0), glm::vec3(0.3f));
-                auto T = glm::translate(glm::mat4x4(1.0), glm::vec3(0.5, 0.0, 0.0));
+                auto T = glm::translate(glm::mat4x4(1.0), glm::vec3(0.0, 0.0, 0.0));
                 auto R = glm::rotate(glm::mat4x4(1.0), angle, glm::vec3(0.0, 0.0, 1.0));
                 return R * T * S;
             }();
@@ -160,12 +162,12 @@ int main() {
             auto render_pass = wga::object{encoder.get().beginRenderPass(render_pass_desc)};
 
             render_pass.get().setPipeline(context.pipeline.get());
-            render_pass.get().setVertexBuffer(0, model.vertex_buffer.get(), 0, model.point_data_size);
-            render_pass.get().setIndexBuffer(model.index_buffer.get(), wgpu::IndexFormat::Uint32, 0,
-                                             model.index_data_size);
+
+            render_pass.get().setVertexBuffer(0, model.vertex_buffer.get(), 0, model.vertex_data_size);
+
             uint32_t dynamic_offset = 0 * uniform_stride;
             render_pass.get().setBindGroup(0, context.bind_group.get(), 1, &dynamic_offset);
-            render_pass.get().drawIndexed(model.index_count, 1, 0, 0, 0);
+            render_pass.get().draw(model.index_count, 1, 0, 0);
 
             //dynamic_offset = 1 * uniform_stride;
             //render_pass.get().setBindGroup(0, context.bind_group.get(), 1, &dynamic_offset);

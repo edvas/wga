@@ -5,5 +5,8 @@
   "dependencies" : [ {
     "name" : "glm",
     "version>=" : "2023-06-08"
+  }, {
+    "name" : "tinyobjloader",
+    "version>=" : "2.0.0-rc9"
   } ]
 }

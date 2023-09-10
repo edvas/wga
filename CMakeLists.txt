@@ -7,6 +7,9 @@ add_subdirectory(libs/glfw)
 add_subdirectory(libs/webgpu)
 add_subdirectory(libs/glfw3webgpu)
 
+find_package(glm CONFIG REQUIRED)
+find_package(tinyobjloader CONFIG REQUIRED)
+
 add_executable(wga main.cpp)
 
 set_target_properties(wga PROPERTIES
@@ -14,7 +17,7 @@ set_target_properties(wga PROPERTIES
         C_STANDARD 17)
 
 target_link_libraries(wga PRIVATE
-        glfw webgpu glfw3webgpu)
+        glfw webgpu glfw3webgpu glm::glm tinyobjloader::tinyobjloader)
 
 target_include_directories(wga PRIVATE
         ${CMAKE_SOURCE_DIR}/src

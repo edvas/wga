@@ -25,7 +25,6 @@ namespace wga {
         std::vector<float> point_data;
         std::vector<std::uint32_t> index_data;
 
-
         if (!wga::geometry::load(path, point_data, index_data, dimensions)) {
             throw std::runtime_error("Could not load geometry from file!");
         }
@@ -46,6 +45,30 @@ namespace wga {
         context.queue.get().writeBuffer(model.index_buffer.get(), 0,
                                         index_data.data(), wga::bytesize(index_data));
 
+        return model;
+    }
+
+    struct model_obj {
+        wga::object<wgpu::Buffer, true> vertex_buffer;
+        std::size_t vertex_data_size;
+        std::uint32_t index_count;
+    };
+
+    auto create_model_obj(wga::context &context, const std::filesystem::path &path) {
+        std::vector<wga::shader_type::vertex_attributes> vertex_data;
+        if (!wga::geometry::load_obj(path, vertex_data)) {
+            throw std::runtime_error("Could not load geometry!");
+        }
+
+        wga::model_obj model{
+                wga::create_buffer(context.device, wga::bytesize(vertex_data),
+                                   wgpu::BufferUsage::CopyDst | wgpu::BufferUsage::Vertex),
+                wga::bytesize(vertex_data),
+                static_cast<std::uint32_t>(vertex_data.size())
+        };
+
+        context.queue.get().writeBuffer(model.vertex_buffer.get(), 0,
+                                        vertex_data.data(), wga::bytesize(vertex_data));
         return model;
     }
 }
