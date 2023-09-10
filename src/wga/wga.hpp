@@ -30,7 +30,7 @@ namespace wga {
         }
     };
 
-    template<typename T, bool Destroyable = false, bool Logging = false>
+    template<typename T, bool Destroyable = false, bool Logging = true>
     struct object {
         explicit object(T &&t_data)
                 : data{std::forward<T>(t_data)} {
@@ -86,8 +86,9 @@ namespace wga {
         }
     };
 
+    using window_t = std::unique_ptr<GLFWwindow, deleter<GLFWwindow *, glfwDestroyWindow>>;
     auto create_window(const int width, const int height) {
-        return std::unique_ptr<GLFWwindow, deleter<GLFWwindow *, glfwDestroyWindow>>([&]() -> GLFWwindow * {
+        return window_t([&]() -> GLFWwindow * {
             glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
             auto *window = glfwCreateWindow(width, height, "WebGPU Example", nullptr, nullptr);
             if (!window) {
@@ -316,9 +317,7 @@ namespace wga {
         desc.usage = usage;
         desc.size = size;
         desc.mappedAtCreation = false;
-
-        wga::object<wgpu::Buffer, true> buffer{device.get().createBuffer(desc)};
-        return buffer;
+        return wga::object<wgpu::Buffer, true> {device.get().createBuffer(desc)};
     }
 }
 
