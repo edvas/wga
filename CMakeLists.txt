@@ -29,6 +29,7 @@ else ()
             -Wfloat-conversion -Wsign-conversion -Warith-conversion
             -Wsign-promo -Wdouble-promotion -Walloc-zero -Wfloat-equal
             -Wlogical-op -Wold-style-cast -Wformat=2 -Wredundant-decls
+            #-fno-rtti
     )
 endif ()
 

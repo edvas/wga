@@ -14,6 +14,7 @@
 #include <webgpu/webgpu.hpp>
 #include <glfw3webgpu.h>
 
+#include <wga/type_info.hpp>
 #include <wga/shaders.hpp>
 
 namespace wga {
@@ -26,7 +27,7 @@ namespace wga {
     struct deleter {
         auto operator()(T value) {
             F(value);
-            std::clog << "Deleting with " << typeid(F).name() << '\n';
+            std::clog << "Deleting with " << wga::type_name(F) << '\n';
         }
     };
 
@@ -35,13 +36,13 @@ namespace wga {
         explicit object(T &&t_data)
                 : data{std::forward<T>(t_data)} {
             if constexpr (Logging) {
-                std::clog << "wga::object<" << typeid(T).name() << ">(&&)\n";
+                std::clog << "wga::object<" << wga::type_name(data) << ">(&&)\n";
             }
         }
 
         ~object() {
             if constexpr (Logging) {
-                std::clog << "wga::object<" << typeid(T).name() << ">~()\n";
+                std::clog << "wga::object<" << wga::type_name(data) << ">~()\n";
             }
 
             if constexpr (Destroyable) {
