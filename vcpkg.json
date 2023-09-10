@@ -8,5 +8,8 @@
   }, {
     "name" : "tinyobjloader",
     "version>=" : "2.0.0-rc9"
+  }, {
+    "name" : "glfw3",
+    "version>=" : "3.3.8#2"
   } ]
 }

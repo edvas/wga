@@ -3,12 +3,12 @@ project(wga)
 
 set(CMAKE_CXX_STANDARD 17)
 
-add_subdirectory(libs/glfw)
-add_subdirectory(libs/webgpu)
-add_subdirectory(libs/glfw3webgpu)
-
+find_package(glfw3 CONFIG REQUIRED)
 find_package(glm CONFIG REQUIRED)
 find_package(tinyobjloader CONFIG REQUIRED)
+
+add_subdirectory(libs/webgpu)
+add_subdirectory(libs/glfw3webgpu)
 
 add_executable(wga main.cpp)
 
