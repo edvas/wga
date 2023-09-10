@@ -13,10 +13,10 @@
 #include <GLFW/glfw3.h>
 #include <webgpu/webgpu.hpp>
 #include <glfw3webgpu.h>
-#include <glm/glm.hpp>
 
 #include <wga/type_info.hpp>
 #include <wga/shaders.hpp>
+#include <wga/shader_types.hpp>
 
 namespace wga {
     template<template<typename...> class T, typename U, typename... V>
@@ -72,15 +72,6 @@ namespace wga {
 
     private:
         T data;
-    };
-
-    struct uniforms {
-        glm::mat4x4 projection_matrix;
-        glm::mat4x4 view_matrix;
-        glm::mat4x4 model_matrix;
-        glm::vec4 color;
-        float time{};
-        [[maybe_unused]] float padding[3]{};
     };
 
     auto on_device_error(wgpu::ErrorType type, const char *message) {
@@ -178,13 +169,13 @@ namespace wga {
         adapter.get().getLimits(&supported_limits);
 
         wgpu::RequiredLimits required_limits = wgpu::Default;
-        required_limits.limits.maxVertexAttributes = 2;
+        required_limits.limits.maxVertexAttributes = 3;
         required_limits.limits.maxVertexBuffers = 1;
-        required_limits.limits.maxBufferSize = 15 * 5 * sizeof(float);
-        required_limits.limits.maxVertexBufferArrayStride = 6 * sizeof(float);
+        required_limits.limits.maxBufferSize = 10000 * sizeof(wga::shader_type::vertex_attributes);
+        required_limits.limits.maxVertexBufferArrayStride = sizeof(wga::shader_type::vertex_attributes);
         required_limits.limits.minStorageBufferOffsetAlignment = supported_limits.limits.minStorageBufferOffsetAlignment;
         required_limits.limits.minUniformBufferOffsetAlignment = supported_limits.limits.minUniformBufferOffsetAlignment;
-        required_limits.limits.maxInterStageShaderComponents = 3;
+        required_limits.limits.maxInterStageShaderComponents = 6;
         required_limits.limits.maxBindGroups = 1;
         required_limits.limits.maxUniformBuffersPerShaderStage = 1;
         required_limits.limits.maxUniformBufferBindingSize = 16 * 4 * sizeof(float);
@@ -280,7 +271,7 @@ namespace wga {
         device.get().getLimits(&supported_limits);
 
         std::uint32_t step_size = supported_limits.limits.minUniformBufferOffsetAlignment;
-        std::uint32_t target_size = sizeof(wga::uniforms);
+        std::uint32_t target_size = sizeof(wga::shader_type::uniforms);
 
         return step_size * (target_size / step_size + (target_size % step_size == 0 ? 0 : 1));
     }

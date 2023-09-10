@@ -34,7 +34,7 @@ namespace wga {
         binding_layout.binding = 0;
         binding_layout.visibility = wgpu::ShaderStage::Vertex | wgpu::ShaderStage::Fragment;
         binding_layout.buffer.type = wgpu::BufferBindingType::Uniform;
-        binding_layout.buffer.minBindingSize = sizeof(wga::uniforms);
+        binding_layout.buffer.minBindingSize = sizeof(wga::shader_type::uniforms);
         binding_layout.buffer.hasDynamicOffset = true;
 
         wgpu::BindGroupLayoutDescriptor bind_group_layout_desc{};
@@ -50,7 +50,7 @@ namespace wga {
         binding.binding = 0;
         binding.buffer = uniform_buffer.get();
         binding.offset = 0;
-        binding.size = sizeof(wga::uniforms);
+        binding.size = sizeof(wga::shader_type::uniforms);
 
         wgpu::BindGroupDescriptor bind_group_desc{};
         bind_group_desc.layout = bind_group_layout.get();
@@ -90,19 +90,27 @@ namespace wga {
         wgpu::VertexAttribute vertex_pos_attrib;
         vertex_pos_attrib.shaderLocation = 0; // @location(0)
         vertex_pos_attrib.format = wgpu::VertexFormat::Float32x3;
-        vertex_pos_attrib.offset = 0;
+        vertex_pos_attrib.offset = offsetof(wga::shader_type::vertex_attributes, position);
+
+        wgpu::VertexAttribute vertex_normal_attrib;
+        vertex_normal_attrib.shaderLocation = 1; // @location(1)
+        vertex_normal_attrib.format = wgpu::VertexFormat::Float32x3;
+        vertex_normal_attrib.offset = offsetof(wga::shader_type::vertex_attributes, normal);
 
         wgpu::VertexAttribute vertex_color_attrib;
-        vertex_color_attrib.shaderLocation = 1; // @location(1)
+        vertex_color_attrib.shaderLocation = 2; // @location(2)
         vertex_color_attrib.format = wgpu::VertexFormat::Float32x3;
-        vertex_color_attrib.offset = 3 * sizeof(float);
+        vertex_color_attrib.offset = offsetof(wga::shader_type::vertex_attributes, color);
 
-        std::vector<wgpu::VertexAttribute> vertex_attrib{vertex_pos_attrib, vertex_color_attrib};
+        std::vector<wgpu::VertexAttribute> vertex_attrib{
+                vertex_pos_attrib,
+                vertex_normal_attrib,
+                vertex_color_attrib};
 
         wgpu::VertexBufferLayout vertex_buffer_layout;
         vertex_buffer_layout.attributeCount = static_cast<std::uint32_t>(vertex_attrib.size());
         vertex_buffer_layout.attributes = vertex_attrib.data();
-        vertex_buffer_layout.arrayStride = 6 * sizeof(float);
+        vertex_buffer_layout.arrayStride = sizeof(wga::shader_type::vertex_attributes);
         vertex_buffer_layout.stepMode = wgpu::VertexStepMode::Vertex;
 
         wgpu::PipelineLayoutDescriptor pipeline_layout_desc = wgpu::Default;

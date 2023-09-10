@@ -61,21 +61,21 @@ int main() {
             //return glm::mat4x4(1.0f);
         }();
 
-        wga::uniforms uniforms{
+        wga::shader_type::uniforms uniforms{
                 PM,
                 VM,
                 MM,
                 {0.0f, 1.0f, 0.4f, 1.0f}, 1.0f};
         static_assert(sizeof(uniforms) % 16 == 0);
 
-        context.queue.get().writeBuffer(context.uniform_buffer.get(), 0, &uniforms, sizeof(wga::uniforms));
+        context.queue.get().writeBuffer(context.uniform_buffer.get(), 0, &uniforms, sizeof(wga::shader_type::uniforms));
 
         wgpu::SupportedLimits supported_limits;
         context.device.get().getLimits(&supported_limits);
         std::clog << "device.maxVertexAttributes: " << supported_limits.limits.maxVertexAttributes << '\n';
 
         //auto model = wga::create_model(context, "../data/models/webgpu.txt", 2);
-        auto model = wga::create_model(context, "../data/models/pyramid.txt", 3);
+        auto model = wga::create_model(context, "../data/models/pyramid.txt", 6);
 
         auto uniform_stride = get_uniform_buffer_stride(context.device);
 
@@ -83,8 +83,8 @@ int main() {
             glfwPollEvents();
 
             uniforms.time = static_cast<float>(glfwGetTime());
-            context.queue.get().writeBuffer(context.uniform_buffer.get(), offsetof(wga::uniforms, time), &uniforms.time,
-                                            sizeof(wga::uniforms::time));
+            context.queue.get().writeBuffer(context.uniform_buffer.get(), offsetof(wga::shader_type::uniforms, time), &uniforms.time,
+                                            sizeof(wga::shader_type::uniforms::time));
 
             uniforms.model_matrix = [&uniforms] {
                 float angle = uniforms.time;
@@ -93,9 +93,9 @@ int main() {
                 auto R = glm::rotate(glm::mat4x4(1.0), angle, glm::vec3(0.0, 0.0, 1.0));
                 return R * T * S;
             }();
-            context.queue.get().writeBuffer(context.uniform_buffer.get(), offsetof(wga::uniforms, model_matrix),
+            context.queue.get().writeBuffer(context.uniform_buffer.get(), offsetof(wga::shader_type::uniforms, model_matrix),
                                             &uniforms.model_matrix,
-                                            sizeof(wga::uniforms::model_matrix));
+                                            sizeof(wga::shader_type::uniforms::model_matrix));
 
 
             auto next_texture = wga::object{context.swapchain.get().getCurrentTextureView()};
