@@ -66,7 +66,7 @@ namespace wga {
     struct uniforms {
         std::array<float, 4> color{};
         float time{};
-        float padding[3]{};
+        [[maybe_unused]] float padding[3]{};
     };
 
     auto on_device_error(wgpu::ErrorType type, const char *message) {
@@ -152,7 +152,7 @@ namespace wga {
         return wga::object<wgpu::Adapter>{std::forward<wgpu::Adapter>(result.value())};
     }
 
-    auto get_adapter_features(wga::object<wgpu::Adapter> &adapter) {
+    [[maybe_unused]] auto get_adapter_features(wga::object<wgpu::Adapter> &adapter) {
         auto feature_count = adapter.get().enumerateFeatures(nullptr);
         std::vector<wgpu::FeatureName> features(feature_count, wgpu::FeatureName::Undefined);
         adapter.get().enumerateFeatures(features.data());
@@ -166,7 +166,7 @@ namespace wga {
         wgpu::RequiredLimits required_limits = wgpu::Default;
         required_limits.limits.maxVertexAttributes = 2;
         required_limits.limits.maxVertexBuffers = 1;
-        required_limits.limits.maxBufferSize = 15 * 5 * sizeof(float);
+        required_limits.limits.maxBufferSize = 1024 * sizeof(float);
         required_limits.limits.maxVertexBufferArrayStride = 5 * sizeof(float);
         required_limits.limits.minStorageBufferOffsetAlignment = supported_limits.limits.minStorageBufferOffsetAlignment;
         required_limits.limits.minUniformBufferOffsetAlignment = supported_limits.limits.minUniformBufferOffsetAlignment;
@@ -174,6 +174,7 @@ namespace wga {
         required_limits.limits.maxBindGroups = 1;
         required_limits.limits.maxUniformBuffersPerShaderStage = 1;
         required_limits.limits.maxUniformBufferBindingSize = 16 * sizeof(float);
+        required_limits.limits.maxDynamicUniformBuffersPerPipelineLayout = 1;
 
         wgpu::DeviceDescriptor device_descriptor = wgpu::Default;
         device_descriptor.label = "My Device";
@@ -255,6 +256,16 @@ namespace wga {
         desc.size = size;
         desc.mappedAtCreation = false;
         return wga::object<wgpu::Buffer, true>{device.get().createBuffer(desc)};
+    }
+
+    auto get_uniform_buffer_stride(wga::object<wgpu::Device> &device) {
+        wgpu::SupportedLimits supported_limits;
+        device.get().getLimits(&supported_limits);
+
+        std::uint32_t step_size = supported_limits.limits.minUniformBufferOffsetAlignment;
+        std::uint32_t target_size = sizeof(wga::uniforms);
+
+        return step_size * (target_size / step_size + (target_size % step_size == 0 ? 0 : 1));
     }
 }
 

@@ -34,6 +34,7 @@ namespace wga {
         binding_layout.visibility = wgpu::ShaderStage::Vertex | wgpu::ShaderStage::Fragment;
         binding_layout.buffer.type = wgpu::BufferBindingType::Uniform;
         binding_layout.buffer.minBindingSize = sizeof(wga::uniforms);
+        binding_layout.buffer.hasDynamicOffset = true;
 
         wgpu::BindGroupLayoutDescriptor bind_group_layout_desc{};
         bind_group_layout_desc.entryCount = 1;
@@ -63,7 +64,6 @@ namespace wga {
                          wga::object<wgpu::BindGroupLayout> &bind_group_layout) {
 
         auto shader_module = wga::create_shader_module("../data/shaders/basic_color.wgsl", device);
-        std::clog << "Shader module: " << shader_module.get() << '\n';
 
         wgpu::BlendState blend_state;
         blend_state.color.srcFactor = wgpu::BlendFactor::SrcAlpha;
@@ -132,14 +132,15 @@ namespace wga {
         return wga::object<wgpu::RenderPipeline>{device.get().createRenderPipeline(desc)};
     }
 
-    auto setup(wga::window_t &window, std::uint32_t width, std::uint32_t height) -> wga::context {
+    auto setup(wga::window_t &window, std::uint32_t width, std::uint32_t height,
+               std::uint32_t uniforms_count) -> wga::context {
         wga::context context{
                 wga::create_instance(),
                 wga::create_surface(context.instance, window.get()),
                 wga::request_adapter(context.instance, context.surface),
                 wga::get_device(context.adapter),
                 wga::create_swapchain(context.surface, context.adapter, context.device, width, height),
-                wga::create_buffer(context.device, sizeof(wga::context),
+                wga::create_buffer(context.device, uniforms_count * get_uniform_buffer_stride(context.device),
                                    wgpu::BufferUsage::CopyDst | wgpu::BufferUsage::Uniform),
                 wga::create_bind_group_layout(context.device),
                 wga::create_bind_group(context.device, context.uniform_buffer, context.bind_group_layout),
@@ -149,7 +150,6 @@ namespace wga {
 
         return context;
     }
-
 
 }
 

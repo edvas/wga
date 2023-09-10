@@ -1,9 +1,7 @@
 #include <iostream>
 #include <optional>
-#include <vector>
 
 #include <cstdlib>
-#include <cstdint>
 
 #include <GLFW/glfw3.h>
 
@@ -13,7 +11,6 @@
 #endif
 
 #include <webgpu/webgpu.hpp>
-#include <glfw3webgpu.h>
 
 #include <wga/wga.hpp>
 #include <wga/setup.hpp>
@@ -29,7 +26,7 @@ int main() {
         static constexpr std::uint32_t height{480};
         auto window = wga::create_window(width, height);
 
-        auto context = wga::setup(window, width, height);
+        auto context = wga::setup(window, width, height, 2);
 
         // Note: member alignment
         wga::uniforms uniforms{{0.0f, 1.0f, 0.4f, 1.0f}, 1.0f};
@@ -43,14 +40,24 @@ int main() {
 
         auto model = wga::create_model(context, "../data/models/webgpu.txt");
 
+        auto uniform_stride = get_uniform_buffer_stride(context.device);
+
         while (!glfwWindowShouldClose(window.get())) {
             glfwPollEvents();
 
             uniforms.time = static_cast<float>(glfwGetTime());
-            context.queue.get().writeBuffer(context.uniform_buffer.get(), offsetof(wga::uniforms, time), &uniforms.time, sizeof(wga::uniforms::time));
+            context.queue.get().writeBuffer(context.uniform_buffer.get(), offsetof(wga::uniforms, time), &uniforms.time,
+                                            sizeof(wga::uniforms::time));
 
             uniforms.color = {1.0f, 0.5f, 0.0f, 1.0f};
-            context.queue.get().writeBuffer(context.uniform_buffer.get(), offsetof(wga::uniforms, time), &uniforms.time, sizeof(wga::uniforms::time));
+            context.queue.get().writeBuffer(context.uniform_buffer.get(), offsetof(wga::uniforms, time), &uniforms.time,
+                                            sizeof(wga::uniforms::time));
+
+            uniforms.time = static_cast<float>(glfwGetTime()) - 1.0f;
+            uniforms.color = {0.0f, 0.5f, 1.0f, 1.0f};
+            context.queue.get().writeBuffer(context.uniform_buffer.get(), uniform_stride, &uniforms,
+                                            sizeof(wga::uniforms));
+
 
             auto next_texture = wga::object{context.swapchain.get().getCurrentTextureView()};
             if (!next_texture.get().operator bool()) {
@@ -84,8 +91,12 @@ int main() {
             render_pass.get().setVertexBuffer(0, model.vertex_buffer.get(), 0, model.point_data_size);
             render_pass.get().setIndexBuffer(model.index_buffer.get(), wgpu::IndexFormat::Uint32, 0,
                                              model.index_data_size);
-            render_pass.get().setBindGroup(0, context.bind_group.get(), 0, nullptr);
+            uint32_t dynamic_offset = 0 * uniform_stride;
+            render_pass.get().setBindGroup(0, context.bind_group.get(), 1, &dynamic_offset);
+            render_pass.get().drawIndexed(model.index_count, 1, 0, 0, 0);
 
+            dynamic_offset = 1 * uniform_stride;
+            render_pass.get().setBindGroup(0, context.bind_group.get(), 1, &dynamic_offset);
             render_pass.get().drawIndexed(model.index_count, 1, 0, 0, 0);
 
             render_pass.get().end();
