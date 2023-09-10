@@ -33,12 +33,20 @@ namespace wga {
 
     template<typename T, bool Destroyable = false, bool Logging = true>
     struct object {
+        using U = wga::object<T, Destroyable, Logging>;
+
         explicit object(T &&t_data)
                 : data{std::forward<T>(t_data)} {
             if constexpr (Logging) {
                 std::clog << "wga::object<" << wga::type_name(data) << ">(&&) " << t_data << '\n';
             }
         }
+
+        object(const U& other) = delete;
+        auto operator=(const U& other) -> U& = delete;
+
+        object(U&& other) noexcept = default;
+        auto operator=(U&& other) noexcept -> U& = default;
 
         ~object() {
             if constexpr (Logging) {
@@ -95,7 +103,7 @@ namespace wga {
 
     using window_t = std::unique_ptr<GLFWwindow, deleter<GLFWwindow *, glfwDestroyWindow>>;
 
-    auto create_window(const int width, const int height) {
+    auto create_window(int width, int height) {
         return window_t([&]() -> GLFWwindow * {
             glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
             auto *window = glfwCreateWindow(width, height, "WebGPU Example", nullptr, nullptr);

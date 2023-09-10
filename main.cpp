@@ -28,7 +28,6 @@ int main() {
 
         auto context = wga::setup(window, width, height, 2);
 
-        // Note: member alignment
         wga::uniforms uniforms{{0.0f, 1.0f, 0.4f, 1.0f}, 1.0f};
         static_assert(sizeof(uniforms) % 16 == 0);
 
