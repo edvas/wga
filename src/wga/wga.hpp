@@ -13,6 +13,7 @@
 #include <GLFW/glfw3.h>
 #include <webgpu/webgpu.hpp>
 #include <glfw3webgpu.h>
+#include <glm/glm.hpp>
 
 #include <wga/type_info.hpp>
 #include <wga/shaders.hpp>
@@ -42,11 +43,13 @@ namespace wga {
             }
         }
 
-        object(const U& other) = delete;
-        auto operator=(const U& other) -> U& = delete;
+        object(const U &other) = delete;
 
-        object(U&& other) noexcept = default;
-        auto operator=(U&& other) noexcept -> U& = default;
+        auto operator=(const U &other) -> U & = delete;
+
+        object(U &&other) noexcept = default;
+
+        auto operator=(U &&other) noexcept -> U & = default;
 
         ~object() {
             if constexpr (Logging) {
@@ -72,7 +75,10 @@ namespace wga {
     };
 
     struct uniforms {
-        std::array<float, 4> color{};
+        glm::mat4x4 projection_matrix;
+        glm::mat4x4 view_matrix;
+        glm::mat4x4 model_matrix;
+        glm::vec4 color;
         float time{};
         [[maybe_unused]] float padding[3]{};
     };
@@ -174,14 +180,14 @@ namespace wga {
         wgpu::RequiredLimits required_limits = wgpu::Default;
         required_limits.limits.maxVertexAttributes = 2;
         required_limits.limits.maxVertexBuffers = 1;
-        required_limits.limits.maxBufferSize = 1024 * sizeof(float);
+        required_limits.limits.maxBufferSize = 15 * 5 * sizeof(float);
         required_limits.limits.maxVertexBufferArrayStride = 6 * sizeof(float);
         required_limits.limits.minStorageBufferOffsetAlignment = supported_limits.limits.minStorageBufferOffsetAlignment;
         required_limits.limits.minUniformBufferOffsetAlignment = supported_limits.limits.minUniformBufferOffsetAlignment;
         required_limits.limits.maxInterStageShaderComponents = 3;
         required_limits.limits.maxBindGroups = 1;
         required_limits.limits.maxUniformBuffersPerShaderStage = 1;
-        required_limits.limits.maxUniformBufferBindingSize = 16 * sizeof(float);
+        required_limits.limits.maxUniformBufferBindingSize = 16 * 4 * sizeof(float);
         required_limits.limits.maxDynamicUniformBuffersPerPipelineLayout = 1;
         required_limits.limits.maxTextureDimension1D = 480;
         required_limits.limits.maxTextureDimension2D = 640;

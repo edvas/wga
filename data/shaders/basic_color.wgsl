@@ -1,5 +1,8 @@
 struct uniforms
 {
+    projection_matrix: mat4x4f,
+    view_matrix: mat4x4f,
+    model_matrix: mat4x4f,
     color: vec4f,
     time: f32,
 };
@@ -15,29 +18,15 @@ struct vertex_input
 struct vertex_output
 {
     @builtin(position) position: vec4f,
-    // required_limits.limits.maxInterStageShaderComponents >= 3
     @location(0) color: vec3f,
 };
 
 @vertex
 fn vs_main(in: vertex_input) -> vertex_output
 {
-    let ratio = 640.0 / 480.0;
-    var offset = vec2f(-0.6875, -0.463);
-    offset += 0.3 * vec2f(cos(us.time), sin(us.time));
-
-    let angle = us.time;
-    let alpha: f32 = cos(angle);
-    let beta: f32 = sin(angle);
-
-    var position = vec3f(
-        in.position.x,
-        alpha * in.position.y + beta * in.position.z,
-        alpha * in.position.z - beta * in.position.y
-    );
-
+    let M = us.projection_matrix * us.view_matrix * us.model_matrix;
     var out: vertex_output;
-    out.position = vec4f(position.x + offset.x, (position.y + offset.y) * ratio, position.z * 0.5 + 0.5, 1.0);
+    out.position = us.projection_matrix * us.view_matrix * us.model_matrix * vec4f(in.position, 1.0);
     out.color = in.color;
 	return out;
 }
@@ -47,5 +36,5 @@ fn fs_main(in: vertex_output) -> @location(0) vec4f
 {
     let color = in.color * us.color.rgb;
     let linear_color = pow(color, vec3f(2.2));
-    return vec4f(linear_color, 1.0);
+    return vec4f(linear_color, us.color.a);
 }

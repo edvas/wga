@@ -12,6 +12,12 @@
 
 #include <webgpu/webgpu.hpp>
 
+#define GLM_FORCE_DEPTH_ZERO_TO_ONE
+#define GLM_FORCE_LEFT_HANDED
+
+#include <glm/glm.hpp>
+#include <glm/ext.hpp>
+
 #include <wga/wga.hpp>
 #include <wga/setup.hpp>
 #include <wga/model.hpp>
@@ -26,9 +32,40 @@ int main() {
         static constexpr std::uint32_t height{480};
         auto window = wga::create_window(width, height);
 
-        auto context = wga::setup(window, width, height, 2);
+        auto context = wga::setup(window, width, height, 1);
 
-        wga::uniforms uniforms{{0.0f, 1.0f, 0.4f, 1.0f}, 1.0f};
+        auto MM = [] {
+            float angle = 0.0f;
+            auto S = glm::scale(glm::mat4x4(1.0), glm::vec3(0.3f));
+            auto T = glm::translate(glm::mat4x4(1.0), glm::vec3(0.5, 0.0, 0.0));
+            auto R = glm::rotate(glm::mat4x4(1.0), angle, glm::vec3(0.0, 0.0, 1.0));
+            return R * T * S;
+        }();
+
+        auto VM = [] {
+            float angle = 3.0f * glm::pi<float>() / 4.0f;
+            auto R = glm::rotate(glm::mat4x4(1.0), -angle, glm::vec3(1.0, 0.0, 0.0));
+            auto T = glm::translate(glm::mat4x4(1.0), -glm::vec3(0.0, 0.0, -2.0));
+            return T * R;
+        }();
+
+        auto PM = [] {
+
+            float near = 0.001f;
+            float far = 100.0f;
+            float ratio = 640.0f / 480.0f;
+            float focal_length = 2.0f;
+            float fov = 2.0f * static_cast<float>(glm::atan(1.0f / focal_length));
+            return glm::perspective(fov, ratio, near, far);
+
+            //return glm::mat4x4(1.0f);
+        }();
+
+        wga::uniforms uniforms{
+                PM,
+                VM,
+                MM,
+                {0.0f, 1.0f, 0.4f, 1.0f}, 1.0f};
         static_assert(sizeof(uniforms) % 16 == 0);
 
         context.queue.get().writeBuffer(context.uniform_buffer.get(), 0, &uniforms, sizeof(wga::uniforms));
@@ -49,14 +86,16 @@ int main() {
             context.queue.get().writeBuffer(context.uniform_buffer.get(), offsetof(wga::uniforms, time), &uniforms.time,
                                             sizeof(wga::uniforms::time));
 
-            uniforms.color = {1.0f, 0.5f, 0.0f, 1.0f};
-            context.queue.get().writeBuffer(context.uniform_buffer.get(), offsetof(wga::uniforms, time), &uniforms.time,
-                                            sizeof(wga::uniforms::time));
-
-            uniforms.time = static_cast<float>(glfwGetTime()) - 1.0f;
-            uniforms.color = {0.0f, 0.5f, 1.0f, 1.0f};
-            context.queue.get().writeBuffer(context.uniform_buffer.get(), uniform_stride, &uniforms,
-                                            sizeof(wga::uniforms));
+            uniforms.model_matrix = [&uniforms] {
+                float angle = uniforms.time;
+                auto S = glm::scale(glm::mat4x4(1.0), glm::vec3(0.3f));
+                auto T = glm::translate(glm::mat4x4(1.0), glm::vec3(0.5, 0.0, 0.0));
+                auto R = glm::rotate(glm::mat4x4(1.0), angle, glm::vec3(0.0, 0.0, 1.0));
+                return R * T * S;
+            }();
+            context.queue.get().writeBuffer(context.uniform_buffer.get(), offsetof(wga::uniforms, model_matrix),
+                                            &uniforms.model_matrix,
+                                            sizeof(wga::uniforms::model_matrix));
 
 
             auto next_texture = wga::object{context.swapchain.get().getCurrentTextureView()};
@@ -73,8 +112,9 @@ int main() {
             depth_texture_desc.size = {width, height, 1};
             depth_texture_desc.usage = wgpu::TextureUsage::RenderAttachment;
             depth_texture_desc.viewFormatCount = 1;
-            depth_texture_desc.viewFormats = reinterpret_cast<WGPUTextureFormat*>(&context.depth_texture_format);
-            auto depth_texture = wga::object<wgpu::Texture, true>{context.device.get().createTexture(depth_texture_desc)};
+            depth_texture_desc.viewFormats = reinterpret_cast<WGPUTextureFormat *>(&context.depth_texture_format);
+            auto depth_texture = wga::object<wgpu::Texture, true>{
+                    context.device.get().createTexture(depth_texture_desc)};
 
             wgpu::TextureViewDescriptor depth_texture_view_desc;
             depth_texture_view_desc.aspect = wgpu::TextureAspect::DepthOnly;
@@ -127,9 +167,9 @@ int main() {
             render_pass.get().setBindGroup(0, context.bind_group.get(), 1, &dynamic_offset);
             render_pass.get().drawIndexed(model.index_count, 1, 0, 0, 0);
 
-            dynamic_offset = 1 * uniform_stride;
-            render_pass.get().setBindGroup(0, context.bind_group.get(), 1, &dynamic_offset);
-            render_pass.get().drawIndexed(model.index_count, 1, 0, 0, 0);
+            //dynamic_offset = 1 * uniform_stride;
+            //render_pass.get().setBindGroup(0, context.bind_group.get(), 1, &dynamic_offset);
+            //render_pass.get().drawIndexed(model.index_count, 1, 0, 0, 0);
 
             render_pass.get().end();
 
