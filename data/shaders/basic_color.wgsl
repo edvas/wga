@@ -8,7 +8,7 @@ struct uniforms
 
 struct vertex_input
 {
-    @location(0) position: vec2f,
+    @location(0) position: vec3f,
     @location(1) color: vec3f,
 };
 
@@ -26,8 +26,18 @@ fn vs_main(in: vertex_input) -> vertex_output
     var offset = vec2f(-0.6875, -0.463);
     offset += 0.3 * vec2f(cos(us.time), sin(us.time));
 
+    let angle = us.time;
+    let alpha: f32 = cos(angle);
+    let beta: f32 = sin(angle);
+
+    var position = vec3f(
+        in.position.x,
+        alpha * in.position.y + beta * in.position.z,
+        alpha * in.position.z - beta * in.position.y
+    );
+
     var out: vertex_output;
-    out.position = vec4f(in.position.x + offset.x, (in.position.y + offset.y) * ratio, 0.0, 1.0);
+    out.position = vec4f(position.x + offset.x, (position.y + offset.y) * ratio, 0.0, 1.0);
     out.color = in.color;
 	return out;
 }

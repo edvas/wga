@@ -38,7 +38,8 @@ int main() {
         context.device.get().getLimits(&supported_limits);
         std::clog << "device.maxVertexAttributes: " << supported_limits.limits.maxVertexAttributes << '\n';
 
-        auto model = wga::create_model(context, "../data/models/webgpu.txt");
+        //auto model = wga::create_model(context, "../data/models/webgpu.txt", 2);
+        auto model = wga::create_model(context, "../data/models/pyramid.txt", 3);
 
         auto uniform_stride = get_uniform_buffer_stride(context.device);
 

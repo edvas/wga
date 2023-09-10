@@ -21,12 +21,12 @@ namespace wga {
         std::size_t index_data_size;
     };
 
-    auto create_model(wga::context &context, const std::filesystem::path &path) -> model {
+    auto create_model(wga::context &context, const std::filesystem::path &path, int dimensions) -> model {
         std::vector<float> point_data;
         std::vector<std::uint32_t> index_data;
 
 
-        if (!wga::geometry::load(path, point_data, index_data)) {
+        if (!wga::geometry::load(path, point_data, index_data, dimensions)) {
             throw std::runtime_error("Could not load geometry from file!");
         }
 

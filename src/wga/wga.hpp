@@ -167,7 +167,7 @@ namespace wga {
         required_limits.limits.maxVertexAttributes = 2;
         required_limits.limits.maxVertexBuffers = 1;
         required_limits.limits.maxBufferSize = 1024 * sizeof(float);
-        required_limits.limits.maxVertexBufferArrayStride = 5 * sizeof(float);
+        required_limits.limits.maxVertexBufferArrayStride = 6 * sizeof(float);
         required_limits.limits.minStorageBufferOffsetAlignment = supported_limits.limits.minStorageBufferOffsetAlignment;
         required_limits.limits.minUniformBufferOffsetAlignment = supported_limits.limits.minUniformBufferOffsetAlignment;
         required_limits.limits.maxInterStageShaderComponents = 3;

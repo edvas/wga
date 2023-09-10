@@ -88,20 +88,20 @@ namespace wga {
 
         wgpu::VertexAttribute vertex_pos_attrib;
         vertex_pos_attrib.shaderLocation = 0; // @location(0)
-        vertex_pos_attrib.format = wgpu::VertexFormat::Float32x2;
+        vertex_pos_attrib.format = wgpu::VertexFormat::Float32x3;
         vertex_pos_attrib.offset = 0;
 
         wgpu::VertexAttribute vertex_color_attrib;
         vertex_color_attrib.shaderLocation = 1; // @location(1)
         vertex_color_attrib.format = wgpu::VertexFormat::Float32x3;
-        vertex_color_attrib.offset = 2 * sizeof(float);
+        vertex_color_attrib.offset = 3 * sizeof(float);
 
         std::vector<wgpu::VertexAttribute> vertex_attrib{vertex_pos_attrib, vertex_color_attrib};
 
         wgpu::VertexBufferLayout vertex_buffer_layout;
         vertex_buffer_layout.attributeCount = static_cast<std::uint32_t>(vertex_attrib.size());
         vertex_buffer_layout.attributes = vertex_attrib.data();
-        vertex_buffer_layout.arrayStride = 5 * sizeof(float);
+        vertex_buffer_layout.arrayStride = 6 * sizeof(float);
         vertex_buffer_layout.stepMode = wgpu::VertexStepMode::Vertex;
 
         wgpu::PipelineLayoutDescriptor pipeline_layout_desc = wgpu::Default;
