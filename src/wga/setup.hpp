@@ -31,9 +31,9 @@ namespace wga {
     auto create_bind_group_layout(wga::object<wgpu::Device> &device) {
         wgpu::BindGroupLayoutEntry binding_layout = wgpu::Default;
         binding_layout.binding = 0;
-        binding_layout.visibility = wgpu::ShaderStage::Vertex;
+        binding_layout.visibility = wgpu::ShaderStage::Vertex | wgpu::ShaderStage::Fragment;
         binding_layout.buffer.type = wgpu::BufferBindingType::Uniform;
-        binding_layout.buffer.minBindingSize = sizeof(float);
+        binding_layout.buffer.minBindingSize = sizeof(wga::uniforms);
 
         wgpu::BindGroupLayoutDescriptor bind_group_layout_desc{};
         bind_group_layout_desc.entryCount = 1;
@@ -48,7 +48,7 @@ namespace wga {
         binding.binding = 0;
         binding.buffer = uniform_buffer.get();
         binding.offset = 0;
-        binding.size = sizeof(float);
+        binding.size = sizeof(wga::uniforms);
 
         wgpu::BindGroupDescriptor bind_group_desc{};
         bind_group_desc.layout = bind_group_layout.get();
@@ -139,7 +139,7 @@ namespace wga {
                 wga::request_adapter(context.instance, context.surface),
                 wga::get_device(context.adapter),
                 wga::create_swapchain(context.surface, context.adapter, context.device, width, height),
-                wga::create_buffer(context.device, sizeof(float),
+                wga::create_buffer(context.device, sizeof(wga::context),
                                    wgpu::BufferUsage::CopyDst | wgpu::BufferUsage::Uniform),
                 wga::create_bind_group_layout(context.device),
                 wga::create_bind_group(context.device, context.uniform_buffer, context.bind_group_layout),

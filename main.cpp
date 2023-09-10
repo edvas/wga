@@ -31,8 +31,11 @@ int main() {
 
         auto context = wga::setup(window, width, height);
 
-        float current_time = 1.0f;
-        context.queue.get().writeBuffer(context.uniform_buffer.get(), 0, &current_time, sizeof(float));
+        // Note: member alignment
+        wga::uniforms uniforms{{0.0f, 1.0f, 0.4f, 1.0f}, 1.0f};
+        static_assert(sizeof(uniforms) % 16 == 0);
+
+        context.queue.get().writeBuffer(context.uniform_buffer.get(), 0, &uniforms, sizeof(wga::uniforms));
 
         wgpu::SupportedLimits supported_limits;
         context.device.get().getLimits(&supported_limits);
@@ -43,8 +46,11 @@ int main() {
         while (!glfwWindowShouldClose(window.get())) {
             glfwPollEvents();
 
-            auto t = static_cast<float>(glfwGetTime());
-            context.queue.get().writeBuffer(context.uniform_buffer.get(), 0, &t, sizeof(float));
+            uniforms.time = static_cast<float>(glfwGetTime());
+            context.queue.get().writeBuffer(context.uniform_buffer.get(), offsetof(wga::uniforms, time), &uniforms.time, sizeof(wga::uniforms::time));
+
+            uniforms.color = {1.0f, 0.5f, 0.0f, 1.0f};
+            context.queue.get().writeBuffer(context.uniform_buffer.get(), offsetof(wga::uniforms, time), &uniforms.time, sizeof(wga::uniforms::time));
 
             auto next_texture = wga::object{context.swapchain.get().getCurrentTextureView()};
             if (!next_texture.get().operator bool()) {

@@ -36,7 +36,7 @@ namespace wga {
         explicit object(T &&t_data)
                 : data{std::forward<T>(t_data)} {
             if constexpr (Logging) {
-                std::clog << "wga::object<" << wga::type_name(data) << ">(&&)\n";
+                std::clog << "wga::object<" << wga::type_name(data) << ">(&&) " << t_data << '\n';
             }
         }
 
@@ -61,6 +61,12 @@ namespace wga {
 
     private:
         T data;
+    };
+
+    struct uniforms {
+        std::array<float, 4> color{};
+        float time{};
+        float padding[3]{};
     };
 
     auto on_device_error(wgpu::ErrorType type, const char *message) {
