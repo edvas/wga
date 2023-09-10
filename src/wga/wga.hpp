@@ -88,6 +88,7 @@ namespace wga {
     };
 
     using window_t = std::unique_ptr<GLFWwindow, deleter<GLFWwindow *, glfwDestroyWindow>>;
+
     auto create_window(const int width, const int height) {
         return window_t([&]() -> GLFWwindow * {
             glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
@@ -164,6 +165,9 @@ namespace wga {
         required_limits.limits.minStorageBufferOffsetAlignment = supported_limits.limits.minStorageBufferOffsetAlignment;
         required_limits.limits.minUniformBufferOffsetAlignment = supported_limits.limits.minUniformBufferOffsetAlignment;
         required_limits.limits.maxInterStageShaderComponents = 3;
+        required_limits.limits.maxBindGroups = 1;
+        required_limits.limits.maxUniformBuffersPerShaderStage = 1;
+        required_limits.limits.maxUniformBufferBindingSize = 16 * sizeof(float);
 
         wgpu::DeviceDescriptor device_descriptor = wgpu::Default;
         device_descriptor.label = "My Device";
@@ -214,7 +218,6 @@ namespace wga {
     }
 
     auto create_shader_module(const std::filesystem::path &path, wga::object<wgpu::Device> &device) {
-
         std::ifstream stream(path);
         if (!stream) {
             throw std::runtime_error("Could not load shader file: " + path.string());
@@ -235,81 +238,8 @@ namespace wga {
         shader_module_desc.hintCount = 0;
         shader_module_desc.hints = nullptr;
         std::clog << "Creating shader module\n";
-        //return shader_module.set(device.get().createShaderModule(shader_module_desc));
+
         return wga::object<wgpu::ShaderModule>{device.get().createShaderModule(shader_module_desc)};
-    }
-
-    auto create_pipeline(wga::object<wgpu::Surface> &surface, wga::object<wgpu::Adapter> &adapter,
-                         wga::object<wgpu::Device> &device) {
-
-        auto shader_module = wga::create_shader_module("../data/shaders/basic_color.wgsl", device);
-        std::clog << "Shader module: " << shader_module.get() << '\n';
-
-        wgpu::BlendState blend_state;
-        blend_state.color.srcFactor = wgpu::BlendFactor::SrcAlpha;
-        blend_state.color.dstFactor = wgpu::BlendFactor::OneMinusSrcAlpha;
-        blend_state.color.operation = wgpu::BlendOperation::Add;
-        blend_state.alpha.srcFactor = wgpu::BlendFactor::Zero;
-        blend_state.alpha.dstFactor = wgpu::BlendFactor::One;
-        blend_state.alpha.operation = wgpu::BlendOperation::Add;
-
-        wgpu::ColorTargetState color_target;
-        color_target.format = get_swapchain_format(surface, adapter);
-        color_target.blend = &blend_state;
-        color_target.writeMask = wgpu::ColorWriteMask::All;
-
-        wgpu::FragmentState fragment_state;
-        fragment_state.module = shader_module.get();
-        fragment_state.entryPoint = "fs_main";
-        fragment_state.constantCount = 0;
-        fragment_state.constants = nullptr;
-        fragment_state.targetCount = 1;
-        fragment_state.targets = &color_target;
-
-        wgpu::VertexAttribute vertex_pos_attrib;
-        vertex_pos_attrib.shaderLocation = 0; // @location(0)
-        vertex_pos_attrib.format = wgpu::VertexFormat::Float32x2;
-        vertex_pos_attrib.offset = 0;
-
-        wgpu::VertexAttribute vertex_color_attrib;
-        vertex_color_attrib.shaderLocation = 1; // @location(1)
-        vertex_color_attrib.format = wgpu::VertexFormat::Float32x3;
-        vertex_color_attrib.offset = 2 * sizeof(float);
-
-        std::vector<wgpu::VertexAttribute> vertex_attrib{vertex_pos_attrib, vertex_color_attrib};
-
-        wgpu::VertexBufferLayout vertex_buffer_layout;
-        vertex_buffer_layout.attributeCount = static_cast<std::uint32_t>(vertex_attrib.size());
-        vertex_buffer_layout.attributes = vertex_attrib.data();
-        vertex_buffer_layout.arrayStride = 5 * sizeof(float);
-        vertex_buffer_layout.stepMode = wgpu::VertexStepMode::Vertex;
-
-        wgpu::PipelineLayoutDescriptor pipeline_layout_desc = wgpu::Default;
-        pipeline_layout_desc.label = "Pipeline layout";
-        pipeline_layout_desc.bindGroupLayoutCount = 0;
-        pipeline_layout_desc.bindGroupLayouts = nullptr;
-        wgpu::PipelineLayout layout = device.get().createPipelineLayout(pipeline_layout_desc);
-
-        wgpu::RenderPipelineDescriptor desc;
-        desc.label = "Render pipeline";
-        desc.vertex.bufferCount = 1;
-        desc.vertex.buffers = &vertex_buffer_layout;
-        desc.vertex.module = shader_module.get();
-        desc.vertex.entryPoint = "vs_main";
-        desc.vertex.constantCount = 0;
-        desc.vertex.constants = nullptr;
-        desc.primitive.topology = wgpu::PrimitiveTopology::TriangleList;
-        desc.primitive.stripIndexFormat = wgpu::IndexFormat::Undefined;
-        desc.primitive.frontFace = wgpu::FrontFace::CCW;
-        desc.primitive.cullMode = wgpu::CullMode::None; // Todo: ::Front
-        desc.fragment = &fragment_state;
-        desc.depthStencil = nullptr;
-        desc.multisample.count = 1;
-        desc.multisample.mask = ~0u;
-        desc.multisample.alphaToCoverageEnabled = false;
-        desc.layout = layout;
-
-        return wga::object<wgpu::RenderPipeline>{device.get().createRenderPipeline(desc)};
     }
 
     auto create_buffer(wga::object<wgpu::Device> &device, std::uint64_t size, wgpu::BufferUsageFlags usage) {
@@ -318,7 +248,7 @@ namespace wga {
         desc.usage = usage;
         desc.size = size;
         desc.mappedAtCreation = false;
-        return wga::object<wgpu::Buffer, true> {device.get().createBuffer(desc)};
+        return wga::object<wgpu::Buffer, true>{device.get().createBuffer(desc)};
     }
 }
 

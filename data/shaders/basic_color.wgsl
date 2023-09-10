@@ -1,3 +1,4 @@
+@group(0) @binding(0) var<uniform> u_time: f32;
 
 struct vertex_input
 {
@@ -16,7 +17,8 @@ struct vertex_output
 fn vs_main(in: vertex_input) -> vertex_output
 {
     let ratio = 640.0 / 480.0;
-    let offset = vec2f(-0.6875, -0.463);
+    var offset = vec2f(-0.6875, -0.463);
+    offset += 0.3 * vec2f(cos(u_time), sin(u_time));
 
     var out: vertex_output;
     out.position = vec4f(in.position.x + offset.x, (in.position.y + offset.y) * ratio, 0.0, 1.0);

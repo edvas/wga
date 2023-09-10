@@ -31,6 +31,9 @@ int main() {
 
         auto context = wga::setup(window, width, height);
 
+        float current_time = 1.0f;
+        context.queue.get().writeBuffer(context.uniform_buffer.get(), 0, &current_time, sizeof(float));
+
         wgpu::SupportedLimits supported_limits;
         context.device.get().getLimits(&supported_limits);
         std::clog << "device.maxVertexAttributes: " << supported_limits.limits.maxVertexAttributes << '\n';
@@ -39,6 +42,9 @@ int main() {
 
         while (!glfwWindowShouldClose(window.get())) {
             glfwPollEvents();
+
+            auto t = static_cast<float>(glfwGetTime());
+            context.queue.get().writeBuffer(context.uniform_buffer.get(), 0, &t, sizeof(float));
 
             auto next_texture = wga::object{context.swapchain.get().getCurrentTextureView()};
             if (!next_texture.get().operator bool()) {
@@ -72,6 +78,7 @@ int main() {
             render_pass.get().setVertexBuffer(0, model.vertex_buffer.get(), 0, model.point_data_size);
             render_pass.get().setIndexBuffer(model.index_buffer.get(), wgpu::IndexFormat::Uint32, 0,
                                              model.index_data_size);
+            render_pass.get().setBindGroup(0, context.bind_group.get(), 0, nullptr);
 
             render_pass.get().drawIndexed(model.index_count, 1, 0, 0, 0);
 
