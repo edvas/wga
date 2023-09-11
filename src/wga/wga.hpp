@@ -187,13 +187,13 @@ namespace wga {
         adapter.get().getLimits(&supported_limits);
 
         wgpu::RequiredLimits required_limits = wgpu::Default;
-        required_limits.limits.maxVertexAttributes = 3;
+        required_limits.limits.maxVertexAttributes = 4;
         required_limits.limits.maxVertexBuffers = 1;
         required_limits.limits.maxBufferSize = 10000 * sizeof(wga::shader_type::vertex_attributes);
         required_limits.limits.maxVertexBufferArrayStride = sizeof(wga::shader_type::vertex_attributes);
         required_limits.limits.minStorageBufferOffsetAlignment = supported_limits.limits.minStorageBufferOffsetAlignment;
         required_limits.limits.minUniformBufferOffsetAlignment = supported_limits.limits.minUniformBufferOffsetAlignment;
-        required_limits.limits.maxInterStageShaderComponents = 6;
+        required_limits.limits.maxInterStageShaderComponents = 8;
         required_limits.limits.maxBindGroups = 1;
         required_limits.limits.maxUniformBuffersPerShaderStage = 1;
         required_limits.limits.maxUniformBufferBindingSize = 16 * 4 * sizeof(float);
@@ -201,6 +201,7 @@ namespace wga {
         required_limits.limits.maxTextureDimension1D = 480;
         required_limits.limits.maxTextureDimension2D = 640;
         required_limits.limits.maxTextureArrayLayers = 1;
+        required_limits.limits.maxSampledTexturesPerShaderStage = 1;
 
         wgpu::DeviceDescriptor device_descriptor = wgpu::Default;
         device_descriptor.label = "My Device";

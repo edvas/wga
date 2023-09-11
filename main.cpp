@@ -77,15 +77,79 @@ int main() {
 
         //auto model = wga::create_model(context, "../data/models/webgpu.txt", 2);
         //auto model = wga::create_model(context, "../data/models/pyramid.txt", 6);
-        auto model = wga::create_model_obj(context, "../data/models/pyramid.obj");
+        auto model = wga::create_model_obj(context, "../data/models/cube.obj");
 
         auto uniform_stride = get_uniform_buffer_stride(context.device);
+
+
+        wgpu::TextureDescriptor texture_desc;
+        texture_desc.dimension = wgpu::TextureDimension::_2D;
+        texture_desc.format = wgpu::TextureFormat::RGBA8Unorm;
+        texture_desc.mipLevelCount = 1;
+        texture_desc.sampleCount = 1;
+        texture_desc.size = {256, 256, 1};
+        texture_desc.usage = wgpu::TextureUsage::CopyDst | wgpu::TextureUsage::TextureBinding;
+        texture_desc.viewFormatCount = 0;
+        texture_desc.viewFormats = nullptr;
+        auto texture = wga::object<wgpu::Texture, true>{
+                context.device.get().createTexture(texture_desc)};
+
+        wgpu::TextureViewDescriptor texture_view_desc;
+        texture_view_desc.aspect = wgpu::TextureAspect::All;
+        texture_view_desc.baseArrayLayer = 0;
+        texture_view_desc.arrayLayerCount = 1;
+        texture_view_desc.baseMipLevel = 0;
+        texture_view_desc.mipLevelCount = 1;
+        texture_view_desc.dimension = wgpu::TextureViewDimension::_2D;
+        texture_view_desc.format = texture_desc.format;
+        auto texture_view = wga::object{texture.get().createView(texture_view_desc)};
+
+        auto bind_group = wga::create_bind_group(context.device, context.uniform_buffer, context.bind_group_layout,
+                                                 texture_view);
+
+        std::vector<uint32_t> pixels(4 * texture_desc.size.width * texture_desc.size.height);
+        for (std::uint32_t i = 0; i < texture_desc.size.width; ++i) {
+            for (std::uint32_t j = 0; j < texture_desc.size.height; ++j) {
+                std::uint32_t *p = &pixels[j * texture_desc.size.width + i];
+                if constexpr (false) {
+                    auto p1 = static_cast<std::uint32_t>(static_cast<std::uint8_t>(i) << 24);
+                    auto p2 = static_cast<std::uint32_t>(static_cast<std::uint8_t>(j) << 16);
+                    auto p3 = static_cast<std::uint32_t>(128u << 8);
+                    auto p4 = static_cast<std::uint32_t>(255u << 0);
+                    *p = p1 | p2 | p3 | p4;
+                } else {
+                    auto p1 = static_cast<std::uint32_t>(
+                            static_cast<std::uint8_t>((i / 16) % 2 == (j / 16) % 2 ? 255u : 0) << 0);
+                    auto p2 = static_cast<std::uint32_t>(
+                            static_cast<std::uint8_t>(((i - j) / 16) % 2 == 0 ? 255u : 0) << 8);
+                    auto p3 = static_cast<std::uint32_t>(
+                            static_cast<std::uint8_t>(((i + j) / 16) % 2 == 0 ? 255u : 0) << 16);
+                    auto p4 = static_cast<std::uint32_t>(255u << 24);
+                    *p = p1 | p2 | p3 | p4;
+                }
+            }
+        }
+
+        wgpu::ImageCopyTexture destination;
+        destination.texture = texture.get();
+        destination.mipLevel = 0; // Write to mip level 0
+        destination.origin = {0, 0, 0};
+        destination.aspect = wgpu::TextureAspect::All;
+
+        wgpu::TextureDataLayout source;
+        source.offset = 0;
+        source.bytesPerRow = 4 * texture_desc.size.width;
+        source.rowsPerImage = texture_desc.size.height;
+
+        context.queue.get().writeTexture(destination, pixels.data(), pixels.size(), source, texture_desc.size);
+
 
         while (!glfwWindowShouldClose(window.get())) {
             glfwPollEvents();
 
             uniforms.time = static_cast<float>(glfwGetTime());
-            context.queue.get().writeBuffer(context.uniform_buffer.get(), offsetof(wga::shader_type::uniforms, time), &uniforms.time,
+            context.queue.get().writeBuffer(context.uniform_buffer.get(), offsetof(wga::shader_type::uniforms, time),
+                                            &uniforms.time,
                                             sizeof(wga::shader_type::uniforms::time));
 
             uniforms.model_matrix = [&uniforms] {
@@ -95,7 +159,8 @@ int main() {
                 auto R = glm::rotate(glm::mat4x4(1.0), angle, glm::vec3(0.0, 0.0, 1.0));
                 return R * T * S;
             }();
-            context.queue.get().writeBuffer(context.uniform_buffer.get(), offsetof(wga::shader_type::uniforms, model_matrix),
+            context.queue.get().writeBuffer(context.uniform_buffer.get(),
+                                            offsetof(wga::shader_type::uniforms, model_matrix),
                                             &uniforms.model_matrix,
                                             sizeof(wga::shader_type::uniforms::model_matrix));
 
@@ -166,7 +231,7 @@ int main() {
             render_pass.get().setVertexBuffer(0, model.vertex_buffer.get(), 0, model.vertex_data_size);
 
             uint32_t dynamic_offset = 0 * uniform_stride;
-            render_pass.get().setBindGroup(0, context.bind_group.get(), 1, &dynamic_offset);
+            render_pass.get().setBindGroup(0, bind_group.get(), 1, &dynamic_offset);
             render_pass.get().draw(model.index_count, 1, 0, 0);
 
             //dynamic_offset = 1 * uniform_stride;

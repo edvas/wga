@@ -20,7 +20,6 @@ namespace wga {
         wga::object<wgpu::SwapChain> swapchain;
         wga::object<wgpu::Buffer, true> uniform_buffer;
         wga::object<wgpu::BindGroupLayout> bind_group_layout;
-        wga::object<wgpu::BindGroup> bind_group;
         wga::object<wgpu::RenderPipeline> pipeline;
         wga::object<wgpu::Queue> queue;
 
@@ -39,32 +38,43 @@ namespace wga {
     }
 
     auto create_bind_group_layout(wga::object<wgpu::Device> &device) {
-        wgpu::BindGroupLayoutEntry binding_layout = wgpu::Default;
+        std::vector<wgpu::BindGroupLayoutEntry> binding_layout_entries(2, wgpu::Default);
+
+        wgpu::BindGroupLayoutEntry& binding_layout = binding_layout_entries[0];
         binding_layout.binding = 0;
         binding_layout.visibility = wgpu::ShaderStage::Vertex | wgpu::ShaderStage::Fragment;
         binding_layout.buffer.type = wgpu::BufferBindingType::Uniform;
         binding_layout.buffer.minBindingSize = sizeof(wga::shader_type::uniforms);
         binding_layout.buffer.hasDynamicOffset = true;
 
+        wgpu::BindGroupLayoutEntry& texture_binding_layout = binding_layout_entries[1];
+        texture_binding_layout.binding = 1;
+        texture_binding_layout.visibility = wgpu::ShaderStage::Fragment;
+        texture_binding_layout.texture.sampleType = wgpu::TextureSampleType::Float;
+        texture_binding_layout.texture.viewDimension = wgpu::TextureViewDimension::_2D;
+
         wgpu::BindGroupLayoutDescriptor bind_group_layout_desc{};
-        bind_group_layout_desc.entryCount = 1;
-        bind_group_layout_desc.entries = &binding_layout;
+        bind_group_layout_desc.entryCount = static_cast<std::uint32_t>(binding_layout_entries.size());
+        bind_group_layout_desc.entries = binding_layout_entries.data();
         return wga::object{device.get().createBindGroupLayout(bind_group_layout_desc)};
     }
 
     auto create_bind_group(wga::object<wgpu::Device> &device, wga::object<wgpu::Buffer, true> &uniform_buffer,
-                           wga::object<wgpu::BindGroupLayout> &bind_group_layout) {
+                           wga::object<wgpu::BindGroupLayout> &bind_group_layout, wga::object<wgpu::TextureView>& texture_view) {
 
-        wgpu::BindGroupEntry binding{};
-        binding.binding = 0;
-        binding.buffer = uniform_buffer.get();
-        binding.offset = 0;
-        binding.size = sizeof(wga::shader_type::uniforms);
+        std::vector<wgpu::BindGroupEntry> bindings(2);
+        bindings[0].binding = 0;
+        bindings[0].buffer = uniform_buffer.get();
+        bindings[0].offset = 0;
+        bindings[0].size = sizeof(wga::shader_type::uniforms);
+
+        bindings[1].binding = 1;
+        bindings[1].textureView = texture_view.get();
 
         wgpu::BindGroupDescriptor bind_group_desc{};
         bind_group_desc.layout = bind_group_layout.get();
-        bind_group_desc.entryCount = 1;
-        bind_group_desc.entries = &binding;
+        bind_group_desc.entryCount = static_cast<std::uint32_t>(bindings.size());
+        bind_group_desc.entries = bindings.data();
         auto bind_group = device.get().createBindGroup(bind_group_desc);
         return wga::object{std::forward<wgpu::BindGroup>(bind_group)};
     }
@@ -111,10 +121,16 @@ namespace wga {
         vertex_color_attrib.format = wgpu::VertexFormat::Float32x3;
         vertex_color_attrib.offset = offsetof(wga::shader_type::vertex_attributes, color);
 
+        wgpu::VertexAttribute vertex_uv_attrib;
+        vertex_uv_attrib.shaderLocation = 3; // @location(3)
+        vertex_uv_attrib.format = wgpu::VertexFormat::Float32x2;
+        vertex_uv_attrib.offset = offsetof(wga::shader_type::vertex_attributes, uv);
+
         std::vector<wgpu::VertexAttribute> vertex_attrib{
                 vertex_pos_attrib,
                 vertex_normal_attrib,
-                vertex_color_attrib};
+                vertex_color_attrib,
+                vertex_uv_attrib};
 
         wgpu::VertexBufferLayout vertex_buffer_layout;
         vertex_buffer_layout.attributeCount = static_cast<std::uint32_t>(vertex_attrib.size());
@@ -169,7 +185,6 @@ namespace wga {
                 wga::create_buffer(context.device, uniforms_count * get_uniform_buffer_stride(context.device),
                                    wgpu::BufferUsage::CopyDst | wgpu::BufferUsage::Uniform),
                 wga::create_bind_group_layout(context.device),
-                wga::create_bind_group(context.device, context.uniform_buffer, context.bind_group_layout),
                 wga::create_pipeline(context.surface, context.adapter, context.device, context.bind_group_layout,
                                      context.depth_texture_format),
                 wga::create_queue(context.device)

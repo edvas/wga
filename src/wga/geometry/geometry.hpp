@@ -130,6 +130,12 @@ namespace wga::geometry {
                         attrib.colors[3 * ci + 1],
                         attrib.colors[3 * ci + 2]
                 };
+
+                const auto ui = static_cast<std::size_t>(idx.texcoord_index);
+                vertex_data[offset + i].uv = {
+                        attrib.texcoords[2 * ui + 0],
+                        1 - attrib.texcoords[2 * ui + 1],
+                };
             }
         }
 

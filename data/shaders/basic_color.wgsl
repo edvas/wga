@@ -8,12 +8,14 @@ struct uniforms
 };
 
 @group(0) @binding(0) var<uniform> us: uniforms;
+@group(0) @binding(1) var gradient_texture: texture_2d<f32>;
 
 struct vertex_input
 {
     @location(0) position: vec3f,
     @location(1) normal: vec3f,
     @location(2) color: vec3f,
+    @location(3) uv: vec2f,
 };
 
 struct vertex_output
@@ -21,6 +23,7 @@ struct vertex_output
     @builtin(position) position: vec4f,
     @location(0) color: vec3f,
     @location(1) normal: vec3f,
+    @location(2) uv: vec2f,
 };
 
 @vertex
@@ -31,6 +34,7 @@ fn vs_main(in: vertex_input) -> vertex_output
     out.position = us.projection_matrix * us.view_matrix * us.model_matrix * vec4f(in.position, 1.0);
     out.normal = (us.model_matrix * vec4f(in.normal, 0.0)).xyz;
     out.color = in.color;
+    out.uv = in.uv;
 	return out;
 }
 
@@ -50,7 +54,10 @@ fn fs_main(in: vertex_output) -> @location(0) vec4f
     //let color = in.color * us.color.rgb;
     let shading = shading_1 + shading_2;
 
-    let color = in.color * shading;
+    let texel_coords = vec2i(in.uv * vec2f(textureDimensions(gradient_texture)));
+
+    //let color = in.color * shading;
+    let color = textureLoad(gradient_texture, texel_coords, 0).rgb;
     let linear_color = pow(color, vec3f(2.2));
     return vec4f(linear_color, us.color.a);
 }
