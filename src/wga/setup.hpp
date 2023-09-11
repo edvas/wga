@@ -5,6 +5,8 @@
 #ifndef WGA_SETUP_HPP
 #define WGA_SETUP_HPP
 
+#include <memory>
+
 #include <wga/wga.hpp>
 #include <wga/callbacks.hpp>
 
@@ -21,12 +23,19 @@ namespace wga {
         wga::object<wgpu::BindGroup> bind_group;
         wga::object<wgpu::RenderPipeline> pipeline;
         wga::object<wgpu::Queue> queue;
+
+        context() = delete;
+        ~context() = default;
+        context(const context&) = delete;
+        context(context&&) = default;
+        auto operator=(const context&) = delete;
+        auto operator=(context&&) noexcept -> wga::context& = delete;
     };
 
     auto create_queue(wga::object<wgpu::Device> &device) {
-        auto queue = wga::object{device.get().getQueue()};
-        queue.get().onSubmittedWorkDone(wga::on_queue_work_done);
-        return queue;
+        auto queue = device.get().getQueue();
+        queue.onSubmittedWorkDone(wga::on_queue_work_done);
+        return wga::object{std::forward<wgpu::Queue>(queue)};
     }
 
     auto create_bind_group_layout(wga::object<wgpu::Device> &device) {

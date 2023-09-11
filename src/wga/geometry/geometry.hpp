@@ -103,9 +103,13 @@ namespace wga::geometry {
         vertex_data.clear();
         for(const auto& shape : shapes) {
             const std::size_t offset = vertex_data.size();
-            vertex_data.resize(offset + shape.mesh.indices.size());
+            const std::size_t size = shape.mesh.indices.size();
+            vertex_data.resize(offset + size);
+            std::clog << vertex_data.size() << '\n';
 
-            for (std::size_t i = 0; i < shape.mesh.indices.size(); ++i) {
+            std::clog << "it=" << size << '\n';
+            for (std::size_t i = 0; i < size; ++i) {
+                std::clog << "i=" << i << '\n';
                 const auto &idx = shape.mesh.indices[i];
 
                 // +X+Y+Z => +X-Z+Y
@@ -118,16 +122,16 @@ namespace wga::geometry {
 
                 const auto ni = static_cast<std::size_t>(idx.normal_index);
                 vertex_data[offset + i].normal = {
-                        attrib.vertices[3 * ni + 0],
-                        -attrib.vertices[3 * ni + 2],
-                        attrib.vertices[3 * ni + 1]
+                        attrib.normals[3 * ni + 0],
+                        -attrib.normals[3 * ni + 2],
+                        attrib.normals[3 * ni + 1]
                 };
 
                 const auto ci = vi;
                 vertex_data[offset + i].color = {
-                        attrib.vertices[3 * ci + 0],
-                        attrib.vertices[3 * ci + 1],
-                        attrib.vertices[3 * ci + 2]
+                        attrib.colors[3 * ci + 0],
+                        attrib.colors[3 * ci + 1],
+                        attrib.colors[3 * ci + 2]
                 };
             }
         }

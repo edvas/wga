@@ -47,26 +47,44 @@ namespace wga {
 
         auto operator=(const U &other) -> U & = delete;
 
-        object(U &&other) noexcept = default;
+        object(U &&other) noexcept : data(other.data) {
+            static_assert(sizeof(T) >= sizeof (std::size_t));
+            *reinterpret_cast<std::size_t*>(&other.data) = 0xBEAD5BEAD5;
+        }
 
-        auto operator=(U &&other) noexcept -> U & = default;
+        auto operator=(U &&other) noexcept -> U & = delete;
 
         ~object() {
-            if constexpr (Logging) {
-                std::clog << "wga::object<" << wga::type_name(data) << ">~()\n";
-            }
+            if (*reinterpret_cast<std::size_t*>(&data) != 0xBEAD5BEAD5) {
+                if constexpr (Logging) {
+                    std::clog << "wga::object<" << wga::type_name(data) << ">~()\n";
+                }
 
-            if constexpr (Destroyable) {
-                data.destroy();
+                if constexpr (Destroyable) {
+                    data.destroy();
+                }
+                data.release();
+            }else
+            {
+                if constexpr (Logging) {
+                    std::clog << "wga::object<" << wga::type_name(data) << ">~() of moved from object\n";
+                }
             }
-            data.release();
         }
 
         [[nodiscard]] auto &get() noexcept {
+            if (*reinterpret_cast<std::size_t*>(&data) == 0xBEAD5BEAD5)
+            {
+                std::cerr << "Use of deleted object!\n";
+            }
             return data;
         }
 
         [[maybe_unused]] [[nodiscard]] const auto &get() const noexcept {
+            if (*reinterpret_cast<std::size_t*>(&data) == 0xBEAD5BEAD5)
+            {
+                std::cerr << "Use of deleted object!\n";
+            }
             return data;
         }
 

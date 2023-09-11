@@ -10,7 +10,7 @@
 namespace wga {
     template<typename T>
     auto type_name(const T &) -> const char * {
-#if defined(__GXX_RTTI) || defined(__CPPRTTI)
+#if defined(__GXX_RTTI) || defined(__CPPRTTI) || defined(_MSC_VER)
         return typeid(T).name();
 #else
         return "(no rtti)";
