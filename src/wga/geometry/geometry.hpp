@@ -105,11 +105,8 @@ namespace wga::geometry {
             const std::size_t offset = vertex_data.size();
             const std::size_t size = shape.mesh.indices.size();
             vertex_data.resize(offset + size);
-            std::clog << vertex_data.size() << '\n';
 
-            std::clog << "it=" << size << '\n';
             for (std::size_t i = 0; i < size; ++i) {
-                std::clog << "i=" << i << '\n';
                 const auto &idx = shape.mesh.indices[i];
 
                 // +X+Y+Z => +X-Z+Y
