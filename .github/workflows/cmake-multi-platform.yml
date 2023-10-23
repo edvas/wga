@@ -57,6 +57,8 @@ jobs:
     - name: Install prerequisites
       run: |
         sudo apt-get update && sudo apt-get install -y \
+          libxinerama-dev \
+          libxcursor-dev \
           xorg \
           libglu1-mesa \
           pkg-config
