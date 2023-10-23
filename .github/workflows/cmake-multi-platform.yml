@@ -59,8 +59,8 @@ jobs:
         sudo apt-get update && sudo apt-get install -y \
           libxinerama-dev \
           libxcursor-dev \
-          xorg \
-          libglu1-mesa \
+          xorg-dev \
+          libglu1-mesa-dev \
           pkg-config
         
     - uses: lukka/get-cmake@latest
