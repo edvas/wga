@@ -53,6 +53,15 @@ jobs:
       shell: bash
       run: |
         echo "build-output-dir=${{ github.workspace }}/build" >> "$GITHUB_OUTPUT"
+
+    - name: Install prerequisites
+      run: |
+        sudo apt-get update && sudo apt-get install -y \
+          xinerama \
+          xcursor \
+          xorg \
+          libglu1-mesa \
+          pkg-config
         
     - uses: lukka/get-cmake@latest
         
