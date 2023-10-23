@@ -27,11 +27,11 @@ if (CMAKE_CXX_COMPILER_ID STREQUAL "MSVC")
     target_compile_options(wga PRIVATE /W4 /WX)
 else ()
     target_compile_options(wga PRIVATE
-            -O0 -Werror -g
+            -O0 -g
             -Wall -Wextra -Wpedantic -Wconversion -Wshadow
-            -Wfloat-conversion -Wsign-conversion -Warith-conversion
-            -Wsign-promo -Wdouble-promotion -Walloc-zero -Wfloat-equal
-            -Wlogical-op -Wold-style-cast -Wformat=2 -Wredundant-decls
+            -Wfloat-conversion -Wsign-conversion
+            -Wsign-promo -Wdouble-promotion -Wfloat-equal
+            -Wold-style-cast -Wformat=2 -Wredundant-decls
             #-fno-rtti
     )
 endif ()
