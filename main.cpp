@@ -1,5 +1,6 @@
 #include <iostream>
 #include <optional>
+#include <chrono>
 
 #include <cstdlib>
 
@@ -143,8 +144,8 @@ int main() {
 
         context.queue.get().writeTexture(destination, pixels.data(), pixels.size(), source, texture_desc.size);
 
-
-        while (!glfwWindowShouldClose(window.get())) {
+        auto start_time = std::chrono::steady_clock::now();
+        while (!glfwWindowShouldClose(window.get()) && std::chrono::steady_clock::now() < start_time + std::chrono::seconds(5)) {
             glfwPollEvents();
 
             uniforms.time = static_cast<float>(glfwGetTime());
