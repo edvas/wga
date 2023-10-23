@@ -4,7 +4,7 @@
   "builtin-baseline" : "4a600e9fea71bd7872080cbb716797e04d30e6d3",
   "dependencies" : [ {
     "name" : "glm",
-    "version" : "0.9.9.8#2"
+    "version>=" : "0.9.9.8#2"
   }, {
     "name" : "tinyobjloader",
     "version>=" : "2.0.0-rc9"
